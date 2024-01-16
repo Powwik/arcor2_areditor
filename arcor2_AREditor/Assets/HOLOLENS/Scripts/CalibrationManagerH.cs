@@ -1,3 +1,5 @@
+#define REMOTING
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -45,18 +47,17 @@ using QRTracking;
         private System.Collections.Generic.Queue<ActionData> pendingActions = new Queue<ActionData>();
         void Awake()
         {
+            #if !UNITY_EDITOR || REMOTING
+                    /*SETUP QR*/
+                    GameObject QRInfo = qrCodePrefab.transform.Find("QRInfo").gameObject;
+                    GameObject Axis = QRInfo.transform.Find("Axis").gameObject;
+                    GameObject axisY =  Axis.transform.Find("AxisPointerY").gameObject;
 
-    #if !UNITY_EDITOR
-            /*SETUP QR*/
-            GameObject QRInfo = qrCodePrefab.transform.Find("QRInfo").gameObject;
-            GameObject Axis = QRInfo.transform.Find("Axis").gameObject;
-            GameObject axisY =  Axis.transform.Find("AxisPointerY").gameObject;
-
-            QRInfo.transform.localPosition = new Vector3(0f,0.06f,0f);
-            axisY.transform.localEulerAngles = new Vector3(0f,0f,-90f);
-    #endif
-
+                    QRInfo.transform.localPosition = new Vector3(0f,0.06f,0f);
+                    axisY.transform.localEulerAngles = new Vector3(0f,0f,-90f);
+            #endif
         }
+
         void Start()
         {
             Debug.Log("QRCodesVisualizer start");
@@ -79,7 +80,7 @@ using QRTracking;
 
 
          public void StartCalibration(object sender, EventArgs e){
-            #if !UNITY_EDITOR
+            #if !UNITY_EDITOR || REMOTING
                 QRCodesManager.Instance.StartQRTracking();
             #else
            //  GameManagerH.Instance.SceneSetParent( helpPr.transform);
@@ -91,15 +92,15 @@ using QRTracking;
          public void SetCalibration(object sender, EventArgs e){
             Calibrated = false;
         //  isScene = false;
-    #if !UNITY_EDITOR
+            #if !UNITY_EDITOR || REMOTING
         
-            GameManagerH.Instance.SceneSetParent(null);
+                    GameManagerH.Instance.SceneSetParent(null);
            
-            GameManagerH.Instance.SceneSetActive(false);
-            QRCodesManager.Instance.StopQRTracking();
-          //  GetComponent<QRCodesManager>().StopQRTracking();
-    #endif
-    }
+                    GameManagerH.Instance.SceneSetActive(false);
+                    QRCodesManager.Instance.StopQRTracking();
+                  //  GetComponent<QRCodesManager>().StopQRTracking();
+            #endif
+            }
         private void Instance_QRCodesTrackingStateChanged(object sender, bool status)
         {
             if (!status)

@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 using Hololens;
 using System;
 using UnityEngine.Events;
-
-
+using System.IO;
 
 public class HSelectorManager : Singleton<HSelectorManager>
 {
@@ -33,6 +32,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
 
  
     public enum ClickedEnum {
+        MoveEndpoint,
         Transform,
         Delete,
         Rename,
@@ -192,16 +192,33 @@ public class HSelectorManager : Singleton<HSelectorManager>
             selectedAction = addInputConncetionClicked;
             setLastClicked(ClickedEnum.AddOutputConnection);
             AddActionPointHandler.Instance.registerHandlers(false); 
-
-            
         }
     }
 
-    
-    public void transformClicked(){    
 
-        if(!(selectedObject is ActionObjectH actionO) ||  GameManagerH.Instance.GetGameState().Equals(GameManagerH.GameStateEnum.SceneEditor)){
-              transformObject();
+    public void moveEndpointClicked()
+    {
+        if (selectedObject is RobotActionObjectH) {
+            moveEndpoint();
+            setLastClicked(ClickedEnum.MoveEndpoint);
+        }
+        else
+        {
+            Debug.Log("CHOOSE ROBOT...");
+        }
+    }
+    public async void moveEndpoint() {
+        if (SceneManagerH.Instance.SceneStarted) {
+            HEndEffectorTransform.Instance.activeEndEffectorTranform(selectedObject);
+        } else {
+            Debug.Log("TURN ON ONLINE MODE");
+        }
+    }
+
+    public void transformClicked()
+    {
+        if (!(selectedObject is ActionObjectH actionO) || GameManagerH.Instance.GetGameState().Equals(GameManagerH.GameStateEnum.SceneEditor)){
+            transformObject();
             setLastClicked(ClickedEnum.Transform);
         }
     }
@@ -223,7 +240,9 @@ public class HSelectorManager : Singleton<HSelectorManager>
         confirmDialog.Close();
     }
 
-    
+
+  
+
     public async void transformObject(){
 
         ///wait 
@@ -233,7 +252,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
             }
             if (getSelecetedObject() is CollisionObjectH co) {
                 if (!await co.WriteLockObjectType()) {
-                Debug.Log("Failed to lock the object");
+                    Debug.Log("Failed to lock the object");
                     await UnlockAllObjects();
                     return;
                 }
@@ -249,7 +268,6 @@ public class HSelectorManager : Singleton<HSelectorManager>
         setSelectedAction(addActionPointClicked);
         AddActionPointHandler.Instance.registerHandlers();
         HProjectManager.Instance.OnActionAddedToScene -= OnActionAddedToScene;
-
     }
     /// <summary>
     /// Creates new action point
@@ -264,20 +282,16 @@ public class HSelectorManager : Singleton<HSelectorManager>
             setSelectedAction(actionAddClicked);
             //lockObject
             HProjectManager.Instance.OnActionAddedToScene += OnActionAddedToScene;
-
         }
-      
     }
 
 
-     public async Task<bool> LockObject(HInteractiveObject interactiveObject, bool lockTree) {
+    public async Task<bool> LockObject(HInteractiveObject interactiveObject, bool lockTree) {
 
-       
         if (await interactiveObject.WriteLock(lockTree)) {
             lockedObjects.Add(interactiveObject);
             return true;
         }
-      
         return false;
     }
 
@@ -340,7 +354,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
 
     public void OnSelectObject(HInteractiveObject selectedObject){
        // lastClicked = null;
-       this.selectedObject = selectedObject;
+        this.selectedObject = selectedObject;
         if (lastClicked == ClickedEnum.Transform && HHandMenuManager.Instance.getActualClicked().Equals(HHandMenuManager.AllClickedEnum.Transform)){
             unlockObject();
             if(! HTransformMenu.Instance.isDeactivated()){
@@ -349,13 +363,9 @@ public class HSelectorManager : Singleton<HSelectorManager>
             else {
                 selectedAction?.Invoke();
             }
-
         }
-       else{
+        else{
             selectedAction?.Invoke();
-       }
-        
-       
-
+        }
     }
 }

@@ -175,7 +175,28 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
     }
 
 
-    
+    /// <summary>
+    /// Returns the URI of asset service
+    /// </summary>
+    /// <returns></returns>
+    public string GetAssetServiceURI() {
+        string uri = PlayerPrefsHelper.LoadString("AssetServiceURI", "");
+
+        // TODO this could (should?) work without connection to the server
+        Debug.Assert(!string.IsNullOrEmpty(GetServerDomain()), "GetAssetServiceURI was probably used without connection to the server.");
+
+        if (string.IsNullOrEmpty(uri))
+            return "http://" + GetServerDomain() + ":6790";
+        else {
+            return uri.Trim('/');
+        }
+    }
+
+    public string GetAssetFileURI(string file_id) {
+        return $"{GetAssetServiceURI()}/assets/{file_id}/data";
+    }
+
+
     /// <summary>
     /// Method for parsing recieved message and invoke proper callback
     /// </summary>

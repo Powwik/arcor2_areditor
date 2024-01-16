@@ -15,8 +15,8 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 
         void Update(){
             if(isHand){
-                 if(HandJointUtils.TryGetJointPose(TrackedHandJoint.IndexTip, Handedness.Any, out MixedRealityPose pose)){
-                      VirtualPointer.transform.position = pose.Position;
+                if(HandJointUtils.TryGetJointPose(TrackedHandJoint.IndexTip, Handedness.Any, out MixedRealityPose pose)){
+                    VirtualPointer.transform.position = pose.Position;
                 }
             }
         }
@@ -29,19 +29,15 @@ using Microsoft.MixedReality.Toolkit.Utilities;
                 {
                     Transform parentTransform = null;
 
-                  
-
                     if(HandJointUtils.TryGetJointPose(TrackedHandJoint.IndexTip, Handedness.Any, out MixedRealityPose pose)){
-                      // parentTransform = pose.Position;
-                      isHand = true;
-                      VirtualPointer.transform.SetParent(null, false);
-                      VirtualPointer.SetActive(true);
-                      VirtualPointer.transform.position = pose.Position;
+                        // parentTransform = pose.Position;
+                        isHand = true;
+                        VirtualPointer.transform.SetParent(null, false);
+                        VirtualPointer.SetActive(true);
+                        VirtualPointer.transform.position = pose.Position;
                     }
                     else {
                         isHand = false;
-
-                    
 
                         // For this example scene, use special logic if a GGVPointer becomes the primary pointer. 
                         // In particular, the GGV pointer defers its cursor management to the GazeProvider, which has its own internal pointer definition as well
@@ -84,4 +80,4 @@ using Microsoft.MixedReality.Toolkit.Utilities;
             OnPrimaryPointerChanged(null, null);
         }
     
-}
+    }

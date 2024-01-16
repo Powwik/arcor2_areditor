@@ -22,7 +22,7 @@ public class UrdfManagerH : Singleton<UrdfManagerH>
     /// <summary>
     /// Dictionary of all loaded urdf robot models. Key = type of robot (e.g. magician), Value = list of RobotModels (including its instances).
     /// </summary>
-    private Dictionary<string, List<RobotModelH>> RobotModels = new Dictionary<string, List<RobotModelH>>();
+    public Dictionary<string, List<RobotModelH>> RobotModels = new Dictionary<string, List<RobotModelH>>();
 
     /// <summary>
     /// Dictionary of all urdf robot source file names (e.g. dobot-magician.zip) and bool value indicating, whether download of these source files is in progress.
@@ -40,18 +40,8 @@ public class UrdfManagerH : Singleton<UrdfManagerH>
 
     public bool IsMenu { get; set; }
     public IEnumerator DownloadUrdfPackage(string robotType, string fileName) {
-        //GameManager.Instance.SetTurboFramerate();
 
-        //Debug.Log("URDF: download started");
-     //   string uri = MainSettingsMenu.Instance.GetProjectServiceURI() + fileName;
-       
-        string uri = PlayerPrefsHelper.LoadString("ProjectServiceURI", "");
-        string suffix = "/files/";
-        if (string.IsNullOrEmpty(uri))
-            uri = "http://" + WebSocketManagerH.Instance.GetServerDomain() + ":6790" + suffix;
-        else
-           uri = uri + suffix;
-        uri = uri + fileName;
+        string uri = WebSocketManagerH.Instance.GetAssetFileURI(fileName);
         UnityWebRequest www;
         try {
             www = UnityWebRequest.Get(uri);
@@ -263,7 +253,6 @@ public class UrdfManagerH : Singleton<UrdfManagerH>
 
         // at the moment, project service could not provide lastModified property for meshes and URDFs, so it has to be downloaded every time..
         return true;
-
         FileInfo urdfFileInfo = new FileInfo(Application.persistentDataPath + "/urdf/" + robotType + "/" + fileName);
         DateTime downloadedZipLastModified = urdfFileInfo.LastWriteTime;
         if (!urdfFileInfo.Exists) {

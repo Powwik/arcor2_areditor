@@ -1,16 +1,5 @@
 {
   "dependencies": {
-    "com.google.ar.core.arfoundation.extensions": {
-      "version": "https://github.com/google-ar/arcore-unity-extensions.git",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {
-        "com.unity.xr.arfoundation": "4.1.5",
-        "com.unity.xr.arcore": "4.1.5",
-        "com.unity.xr.arkit": "4.1.5"
-      },
-      "hash": "8c310cdc5796dccf9e0a5214143492a823e025bf"
-    },
     "com.microsoft.mixedreality.openxr": {
       "version": "file:MixedReality/com.microsoft.mixedreality.openxr-1.6.0.tgz",
       "depth": 0,
@@ -154,7 +143,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.inputsystem": {
-      "version": "1.7.0",
+      "version": "1.6.1",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -197,7 +186,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.services.core": {
-      "version": "1.11.0",
+      "version": "1.10.1",
       "depth": 2,
       "source": "registry",
       "dependencies": {
@@ -336,7 +325,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.core-utils": {
-      "version": "2.2.3",
+      "version": "2.2.1",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -346,7 +335,7 @@
     },
     "com.unity.xr.legacyinputhelpers": {
       "version": "2.1.10",
-      "depth": 1,
+      "depth": 2,
       "source": "registry",
       "dependencies": {
         "com.unity.modules.vr": "1.0.0",
@@ -355,7 +344,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.management": {
-      "version": "4.4.0",
+      "version": "4.3.3",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -363,6 +352,18 @@
         "com.unity.modules.vr": "1.0.0",
         "com.unity.modules.xr": "1.0.0",
         "com.unity.xr.legacyinputhelpers": "2.1.7"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.xr.openxr": {
+      "version": "1.8.1",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.xr.management": "4.0.1",
+        "com.unity.xr.legacyinputhelpers": "2.1.2",
+        "com.unity.inputsystem": "1.4.4",
+        "com.unity.xr.core-utils": "2.1.1"
       },
       "url": "https://packages.unity.com"
     },

@@ -18,12 +18,10 @@ using TMPro;
 public class HHandMenuManager : Singleton<HHandMenuManager>
 {
     // Start is called before the first frame update
-
+    public GameObject moveEndpointButton;
 
     public GameObject transfomButton;
     public GameObject copyObjectButton;
-  //  public GameObject closeMenuButton;
- //   public GameObject closeDetailButton;
 
     public GameObject deleteButton;
 
@@ -52,7 +50,8 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
 
     public TextMeshPro editorStatus;
 
-     public enum AllClickedEnum {
+    public enum AllClickedEnum {
+        MoveEndpoint,
         Transform,
         Delete,
         Rename,
@@ -77,15 +76,14 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
     AllClickedEnum actualClick;
     AllClickedEnum lastClick;
 
-   
     private bool scenesLoaded, projectsLoaded, packagesLoaded, scenesUpdating, projectsUpdating, packagesUpdating;
     private bool wasLastUpdate = false;
 
     public Dictionary<AllClickedEnum, UnityAction> listOfPreviousActions =  new Dictionary<AllClickedEnum, UnityAction>();
-        public Dictionary<AllClickedEnum, UnityAction> listOfNextActions =  new Dictionary<AllClickedEnum, UnityAction>();
+    public Dictionary<AllClickedEnum, UnityAction> listOfNextActions =  new Dictionary<AllClickedEnum, UnityAction>();
 
 
-   private void Awake() {
+    private void Awake() {
         scenesLoaded = projectsLoaded = scenesUpdating = projectsUpdating = packagesLoaded = packagesUpdating = false;
     }
 
@@ -104,6 +102,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
     {
         actualClick = AllClickedEnum.None;
 
+        listOfPreviousActions.Add(AllClickedEnum.MoveEndpoint, UnselectMoveEndpoint);
         listOfPreviousActions.Add(AllClickedEnum.Transform, UnselectTransform);   
         listOfPreviousActions.Add(AllClickedEnum.AddAP, UnselectAddActionPoint);   
         listOfPreviousActions.Add(AllClickedEnum.AddConnection, UnselectAddConnection);   
@@ -114,6 +113,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         listOfPreviousActions.Add(AllClickedEnum.AllAdd,  UnselectAddAll);
         listOfPreviousActions.Add(AllClickedEnum.AllMore, UnselectAddMore);
 
+        listOfNextActions.Add(AllClickedEnum.MoveEndpoint, (() => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.moveEndpointClicked)));
         listOfNextActions.Add(AllClickedEnum.Transform, ( () => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.transformClicked) ) );
         listOfNextActions.Add(AllClickedEnum.Delete,  ( () => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.deleteClicked) ));
         listOfNextActions.Add(AllClickedEnum.Copy,  ( () => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.copyObjectClicked) ));
@@ -127,7 +127,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         listOfNextActions.Add(AllClickedEnum.CreateProject,( () => CreateProject()));
 
         /**ALL BUTTONS*/
-
+        moveEndpointButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.MoveEndpoint));
         transfomButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.Transform));
         deleteButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.Delete));
         copyObjectButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.Copy));
@@ -137,18 +137,11 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         addObjectButton.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.AddObject));
         showScenesButton.OnClick.AddListener(() => {onSeletectedChanged(AllClickedEnum.OpenScenes); });
         showProjectsButton.OnClick.AddListener(() => {onSeletectedChanged(AllClickedEnum.OpenProjects);});
-
-     //   closeButton.OnClick.AddListener(() => {onSeletectedChanged(AllClickedEnum.Close);});
-
         allAddButtons.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.AllAdd));
-
         allMoreButtons.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.AllMore));
         createProject.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.CreateProject));
 
         GameManagerH.Instance.OnGameStateChanged += changeEditorStatus;
-
-
-
     }
 
 
@@ -156,26 +149,28 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
          return actualClick;
      }
 
-   protected virtual void OnObjectLockingEvent(object sender, ObjectLockingEventArgs args) {
-       if(!args.Locked){
+    protected virtual void OnObjectLockingEvent(object sender, ObjectLockingEventArgs args) {
+        if(!args.Locked){
             HLockingEventCache.Instance.OnObjectLockingEvent -= OnObjectLockingEvent;
-             if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-                  nextAction?.Invoke();
-             }
-       }
+            if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+                nextAction?.Invoke();
+            }
+        }
     }
-    public void onSeletectedChanged(AllClickedEnum clicked){
+    public void onSeletectedChanged(AllClickedEnum clicked) {
 
         if (GameManagerH.Instance.GetGameState().Equals(GameManagerH.GameStateEnum.ProjectEditor) &&
+            clicked.Equals(AllClickedEnum.MoveEndpoint) ||
             clicked.Equals(AllClickedEnum.Transform) || clicked.Equals(AllClickedEnum.Delete) || clicked.Equals(AllClickedEnum.Copy) ||
-             clicked.Equals(AllClickedEnum.AddConnection) || clicked.Equals(AllClickedEnum.AddAP)){
-                GameManagerH.Instance. EnableInteractWthActionObjects(false);
-                wasLastUpdate = true;
-         }
-         else if (wasLastUpdate){
+            clicked.Equals(AllClickedEnum.AddConnection) || clicked.Equals(AllClickedEnum.AddAP))
+        {
+            GameManagerH.Instance. EnableInteractWthActionObjects(false);
+            wasLastUpdate = true;
+        }
+        else if (wasLastUpdate){
             GameManagerH.Instance. EnableInteractWthActionObjects(true);
             wasLastUpdate = false;
-         }
+        }
 
         if(actualClick.Equals(AllClickedEnum.None)){
             if(listOfNextActions.TryGetValue(clicked, out UnityAction nextAction)){ 
@@ -207,87 +202,95 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
             }
 
         }
-        /*else  if(clicked.Equals(AllClickedEnum.Close)){
-                HEditorMenuScreen.Instance.CloseScene();
-        }*/
     }
 
-    // Update is called once per frame
-  
-  public void UnselectTransform(){
 
-       HSelectorManager.Instance.setSelectedAction(null);
+    public void UnselectMoveEndpoint() {
 
-      if(HSelectorManager.Instance.isSomethingLocked()){
-          HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
-          HSelectorManager.Instance.unlockObject();
-      }
-      else {
-          HSelectorManager.Instance.updateTransformBeforeUnlock();
-          if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-                  nextAction?.Invoke();
-          }
-      }
-    
-  }
+        HSelectorManager.Instance.setSelectedAction(null);
 
-  public void UnselectAddActionPoint(){
+        if (HSelectorManager.Instance.isSomethingLocked()) {
+            HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
+            HSelectorManager.Instance.unlockObject();
+        } else {
+            HSelectorManager.Instance.updateTransformBeforeUnlock();
+            if (listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)) {
+                nextAction?.Invoke();
+            }
+        }
+    }
 
-    if(HSelectorManager.Instance.isClickedAddAP()){
+    public void UnselectTransform(){
+
+        HSelectorManager.Instance.setSelectedAction(null);
+
+        if(HSelectorManager.Instance.isSomethingLocked()){
+            HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
+            HSelectorManager.Instance.unlockObject();
+        }
+        else {
+            HSelectorManager.Instance.updateTransformBeforeUnlock();
+            if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+                nextAction?.Invoke();
+            }
+        }
+    }
+
+    public void UnselectAddActionPoint(){
+
+        if(HSelectorManager.Instance.isClickedAddAP()){
             HActionPickerMenu.Instance.cancelAction();
+        }
+        HSelectorManager.Instance.setSelectedAction(null);
+
+        if(HSelectorManager.Instance.isSomethingLocked()){
+            HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
+            HSelectorManager.Instance.unlockObject();
+        }
+        else if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+            nextAction?.Invoke();        
+        }
     }
-    HSelectorManager.Instance.setSelectedAction(null);
 
-    if(HSelectorManager.Instance.isSomethingLocked()){
-        HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
-        HSelectorManager.Instance.unlockObject();
-    }else if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-        nextAction?.Invoke();        
-    }
+    public void UnselectAddConnection(){
 
-       
-  }
-
-  public void UnselectAddConnection(){
-
-      if(HSelectorManager.Instance.isClickedOutputConnection()){
-          HConnectionManagerArcoro.Instance.DestroyConnectionToMouse(); 
-      }
+        if(HSelectorManager.Instance.isClickedOutputConnection()){
+            HConnectionManagerArcoro.Instance.DestroyConnectionToMouse(); 
+        }
      
-      HSelectorManager.Instance.setSelectedAction(null);
-      HSelectorManager.Instance.setLastClicked(HSelectorManager.ClickedEnum.None);
+        HSelectorManager.Instance.setSelectedAction(null);
+        HSelectorManager.Instance.setLastClicked(HSelectorManager.ClickedEnum.None);
       
-       if(HSelectorManager.Instance.isSomethingLocked()){
-          HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
-          HSelectorManager.Instance.unlockObject();
-      }else if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-                  nextAction?.Invoke();
-      }
-      
-  }
+        if(HSelectorManager.Instance.isSomethingLocked()){
+            HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
+            HSelectorManager.Instance.unlockObject();
+        }
+        else if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+            nextAction?.Invoke();
+        }
+    }
 
-   public void UnselectOpenProjectsScenes(){
-      ListScenes.Instance.setActiveMenu(false);
-      if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-                  nextAction?.Invoke();
-      }
-  }
+    public void UnselectOpenProjectsScenes(){
+        ListScenes.Instance.setActiveMenu(false);
+        if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+            nextAction?.Invoke();
+        }
+    }
 
   
-  public void UnselectAddModel(){
-      models.SetActive(false);
-      if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-                  nextAction?.Invoke();
-      }
-  }
+    public void UnselectAddModel(){
+        models.SetActive(false);
+        if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+            nextAction?.Invoke();
+        }
+    }
 
-  public void UnselectAddObject(){
-      collisons.SetActive(false);
-      if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
-                  nextAction?.Invoke();
-      }
-
-  }
+    public void UnselectAddObject(){
+        collisons.SetActive(false);
+        if(listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)){
+            nextAction?.Invoke();
+        }
+    }
 
   public void UnselectAddAll(){
       addButtons.SetActive(false);
@@ -386,7 +389,6 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         scenesLoaded = true;
         GameManagerH.Instance.InvokeScenesListChanged();
     }
-
     
     public void LoadProjectsCb(string id, string responseData) {
         IO.Swagger.Model.ListProjectsResponse response = JsonConvert.DeserializeObject<IO.Swagger.Model.ListProjectsResponse>(responseData);
@@ -435,6 +437,5 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
                 }
             }
         });
-
     }
 }

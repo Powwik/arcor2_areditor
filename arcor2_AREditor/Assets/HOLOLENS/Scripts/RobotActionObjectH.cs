@@ -48,7 +48,7 @@ namespace Hololens {
 
         private bool interactSet = false;
 
-        private Dictionary<string, List<HRobotEE>> EndEffectors = new Dictionary<string, List<HRobotEE>>();
+        public Dictionary<string, List<HRobotEE>> EndEffectors = new Dictionary<string, List<HRobotEE>>();
         
         private GameObject RobotPlaceholder;
 
@@ -72,17 +72,18 @@ namespace Hololens {
         public RobotMeta RobotMeta;
 
         private GameObject model;
-    // Start is called before the first frame update
-          protected override void  Start()
+
+        // Start is called before the first frame update
+        protected override void  Start()
         {
-             base.Start();
+            base.Start();
             if (GameManagerH.Instance.GetGameState() != GameManagerH.GameStateEnum.PackageRunning && SceneManagerH.Instance.RobotsEEVisible && SceneManagerH.Instance.SceneStarted) {
                 _ = EnableVisualisationOfEE();
             }
             SceneManagerH.Instance.OnSceneStateEvent += OnSceneStateEvent;
         }
 
-                // ONDESTROY CANNOT BE USED BECAUSE OF ITS DELAYED CALL - it causes mess when directly creating project from scene
+        // ONDESTROY CANNOT BE USED BECAUSE OF ITS DELAYED CALL - it causes mess when directly creating project from scene
         private void OnDestroy() {
         //    base.OnDestroy();
             SceneManagerH.Instance.OnSceneStateEvent -= OnSceneStateEvent;
@@ -121,7 +122,7 @@ namespace Hololens {
         }
 
         // Update is called once per frame
-         protected override async void  Update()
+        protected override async void  Update()
         {
             base.Update();
         }
@@ -150,8 +151,7 @@ namespace Hololens {
                     } catch (Exception ex) when (ex is NullReferenceException || ex is MissingReferenceException) {
                         continue;
                     }
-                }
-                               
+                }              
             }           
         }
 
@@ -838,7 +838,7 @@ namespace Hololens {
         //boundsControl.RotationHandlesConfig.ShowHandleForY = false;
         boundsControl.RotationHandlesConfig.ShowHandleForZ = false;
         boundsControl.UpdateBounds();
-     }
+    }
 
     }
 }

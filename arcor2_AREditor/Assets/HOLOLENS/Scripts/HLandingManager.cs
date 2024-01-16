@@ -37,14 +37,16 @@ public class HLandingManager : Singleton<HLandingManager>
                 return;
             }
         }
-       
+
+        string trimedDomain = domain.text.Trim();
+
         int portInt = int.Parse(port.text);
-        PlayerPrefs.SetString("arserver_domain", domain.text);
+        PlayerPrefs.SetString("arserver_domain", trimedDomain);
         PlayerPrefs.SetInt("arserver_port", portInt);
         PlayerPrefs.SetString("arserver_username", user.text);
        // PlayerPrefs.SetInt("arserver_keep_connected", KeepConnected.isOn ? 1 : 0);
         PlayerPrefs.Save();
-        GameManagerH.Instance.ConnectToSever(domain.text, portInt);
+        GameManagerH.Instance.ConnectToSever(trimedDomain, portInt);
     }
 
     internal string GetUsername() {

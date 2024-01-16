@@ -27,10 +27,10 @@ public class MeshImporterH : Singleton<MeshImporterH>
     /// <param name="mesh"></param>
     /// <param name="aoId">ID of action object which is asociated with the mesh</param>
     public void LoadModel(IO.Swagger.Model.Mesh mesh, string aoId) {
-        if (CheckIfNewerRobotModelExists(mesh.Id, mesh.DataId)) {
-            StartCoroutine(DownloadMesh(mesh.Id, mesh.DataId, aoId));
+        if (CheckIfNewerRobotModelExists(mesh.Id, mesh.AssetId)) {
+            StartCoroutine(DownloadMesh(mesh.Id, mesh.AssetId, aoId));
         } else {
-            StartCoroutine(ImportMeshWhenReady(string.Format("{0}/meshes/{1}/{2}", Application.persistentDataPath, mesh.Id, mesh.DataId), aoId, mesh.DataId));
+            StartCoroutine(ImportMeshWhenReady(string.Format("{0}/meshes/{1}/{2}", Application.persistentDataPath, mesh.Id, mesh.AssetId), aoId, mesh.AssetId));
         }
     }
 
@@ -66,7 +66,7 @@ public class MeshImporterH : Singleton<MeshImporterH>
             AssetLoaderOptions assetLoaderOptions = AssetLoader.CreateDefaultLoaderOptions();
             AssetLoader.LoadModelFromFile(path, null, delegate (AssetLoaderContext assetLoaderContext) {
                  if (Path.GetExtension(path).ToLower() == ".stl") {
-                    assetLoaderContext.RootGameObject.transform.Rotate(0f, 180f, 0f);
+                    assetLoaderContext.RootGameObject.transform.Rotate(0f, 90f, 0f);
                 }
                 OnMeshImported?.Invoke(this, new ImportedMeshEventArgsH(assetLoaderContext.WrapperGameObject, aoId));
             }, null, assetLoaderOptions: assetLoaderOptions, onError: OnModelLoadError, wrapperGameObject: loadedObject);
@@ -82,17 +82,7 @@ public class MeshImporterH : Singleton<MeshImporterH>
     /// <returns></returns>
     private IEnumerator DownloadMesh(string meshId, string fileName, string aoId) {
 
-        //Debug.LogError("MESH: download started");
-     //   string uri = MainSettingsMenu.Instance.GetProjectServiceURI() + fileName;
-
-               //Debug.LogError("MESH: download started");
-            string uri = PlayerPrefsHelper.LoadString("ProjectServiceURI", "");
-        string suffix =  "/files/";
-        if (string.IsNullOrEmpty(uri))
-            uri = "http://" + WebSocketManagerH.Instance.GetServerDomain() + ":6790" + suffix;
-        else
-            uri = uri + suffix;
-        uri = "http://" + WebSocketManagerH.Instance.GetServerDomain() + ":6790" + suffix +fileName;
+        string uri = WebSocketManagerH.Instance.GetAssetFileURI(fileName);
         using (UnityWebRequest www = UnityWebRequest.Get(uri)) {
             // Request and wait for the desired page.
             yield return www.Send();

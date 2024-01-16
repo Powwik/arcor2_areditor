@@ -21,34 +21,21 @@ public class HEditorMenuScreen : Singleton<HEditorMenuScreen>
     // Start is called before the first frame update
     void Start()
     {
-       // HideEditorSceneMenu();
-
-       // GameManagerH.Instance.OnOpenSceneEditor += OnOpenEditorSceneMenu;
-       // GameManagerH.Instance.OnOpenProjectEditor += OnOpenEditorSceneMenu;
-    
-     //   closeSceneButton.OnClick.AddListener(() => CloseScene());
         notificationButton.OnClick.AddListener(() => HNotificationManager.Instance.ShowNotificationScreen());
         switchSceneState.OnClick.AddListener(() => SwitchSceneState());
         SceneManagerH.Instance.OnSceneStateEvent += OnSceneStateEvent;
 
-
-  //  #if !UNITY_EDITOR
-      //  recalibrateButton.ButtonPressed.AddListener(() => QRTracking.QRCodesManager.Instance.StartQRTracking());
-   // #else
-  //      recalibrateButton.enabled = false;
-  //  #endif
-
     }
 
-     public async void SaveScene() {
-       // SaveButton.SetInteractivity(false, "Saving scene...");
+    public async void SaveScene() {
+        // SaveButton.SetInteractivity(false, "Saving scene...");
         IO.Swagger.Model.SaveSceneResponse saveSceneResponse = await GameManagerH.Instance.SaveScene();
         if (!saveSceneResponse.Result) {
             saveSceneResponse.Messages.ForEach(Debug.LogError);
             HNotificationManager.Instance.ShowNotification("Scene save failed: " + ( saveSceneResponse.Messages.Count > 0 ? saveSceneResponse.Messages[0] : "Failed to save scene"));
             return;
         } else {
-             HNotificationManager.Instance.ShowNotification("There are no unsaved changes");
+            HNotificationManager.Instance.ShowNotification("There are no unsaved changes");
         }
     }
 
@@ -110,7 +97,7 @@ public class HEditorMenuScreen : Singleton<HEditorMenuScreen>
         try {
             await WebSocketManagerH.Instance.StartScene(false);
         } catch (RequestFailedException e) {
-           HNotificationManager.Instance.ShowNotification("Going online failed " +  e.Message);
+            HNotificationManager.Instance.ShowNotification("Going online failed " +  e.Message);
         }
     }
 

@@ -437,8 +437,6 @@ public class SceneManagerH :  Singleton<SceneManagerH>
         catch (Exception e) {
             HNotificationManager.Instance.ShowNotification("UpdateActionObjects  " +  e.Message);
         }
-       
-
     }
 
     /// <summary>
