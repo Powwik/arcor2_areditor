@@ -9,31 +9,41 @@ using UnityEngine.Animations;
 
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
-    HInteractiveObject InteractiveObject;
     public HActionPoint3D point;
     public GameObject gizmoPrefab;
-    public Transform gizmoTransform;
+    public Transform newTransform;
     private HGizmo gizmo;
     HActionPoint3D tmpModel;
 
     private bool isPressed;
+    private bool isManipulating = false;
 
     // Start is called before the first frame update
     void Start()
     {
         isPressed = false;
+        newTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
+        newTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => isManipulating = true);
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (isManipulating)
+        {
+            Debug.Log("MANIPULATING");
+        }
+    }
+
+
+    public void updatePosition()
+    {
+        Debug.Log("Manipulation ENDED!!!");
+        isManipulating = false;
     }
 
     public async void activeEndEffectorTranform(HInteractiveObject robot)
     {
-        //HInteractiveObject copyOfRobot = Instantiate(robot);
-        //robot.gameObject.SetActive(false);
         if (!isPressed)
         {
             isPressed = false;
@@ -44,23 +54,24 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 parent = kvp;
             }
 
+            // create new action point for manipulation
             tmpModel = Instantiate(point, parent.transform.position, parent.transform.rotation);
 
-            gizmoTransform.transform.position = tmpModel.transform.position;
-            gizmoTransform.transform.rotation = tmpModel.transform.rotation;
-            gizmoTransform.transform.localScale = new Vector3(1f, 1f, 1f);
+            newTransform.transform.position = tmpModel.transform.position;
+            newTransform.transform.localScale = new Vector3(1f, 1f, 1f);
 
-            tmpModel.transform.SetParent(gizmoTransform);
-            tmpModel.transform.rotation = tmpModel.transform.rotation;
-            tmpModel.transform.position = tmpModel.transform.position;
-            gizmoTransform.gameObject.SetActive(true);
-            tmpModel.setInterarction(gizmoTransform.gameObject);
+            tmpModel.transform.SetParent(newTransform);
+            tmpModel.setInterarction(newTransform.gameObject);
             tmpModel.EnableOffscreenIndicator(false);
+            newTransform.gameObject.SetActive(true);
 
+
+            // create gizmo model for manipulation
             gizmo = Instantiate(gizmoPrefab).GetComponent<HGizmo>();
             gizmo.transform.SetParent(tmpModel.transform);
+
             gizmo.transform.localScale = new Vector3(0.1f / tmpModel.transform.localScale.x, 0.1f / tmpModel.transform.localScale.y, 0.1f / tmpModel.transform.localScale.z);
-        
+
             gizmo.transform.localPosition = Vector3.zero;
             gizmo.transform.eulerAngles = tmpModel.transform.eulerAngles;
             gizmo.SetXDelta(0);
@@ -68,11 +79,26 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             gizmo.SetZDelta(0);
 
             ConstraintSource source = new ConstraintSource {
-                sourceTransform = gizmoTransform
+                sourceTransform = newTransform
             };
-
-            //gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulationStarted = true);
+            ObjectManipulator[] o = gizmo.gameObject.GetComponentsInChildren<ObjectManipulator>();
+            gizmo.gameObject.GetComponent<ScaleConstraint>().AddSource(source);
+            
+            foreach (ObjectManipulator objectManipulator in o) {
+                objectManipulator.HostTransform = newTransform;
+                objectManipulator.OnManipulationStarted.AddListener((s) => isManipulating = true);
+                objectManipulator.OnManipulationEnded.AddListener((s) => updatePosition());
+            }
         }
+    }
+
+    public void deactiveEndEffectorTransform()
+    {
+        Destroy(tmpModel);
+        tmpModel = null;
+        Destroy(gizmo);
+        gizmo = null;
+        newTransform.gameObject.SetActive(false);
     }
 
     public async void MoveModel()

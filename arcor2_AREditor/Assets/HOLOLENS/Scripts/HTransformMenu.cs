@@ -90,7 +90,6 @@ public class HTransformMenu : Singleton<HTransformMenu> {
             startEndAction.transform.position = model.transform.position;
             startEndAction.SavePosition();
         }
-  
     }
 
     public void deactiveTransform(){

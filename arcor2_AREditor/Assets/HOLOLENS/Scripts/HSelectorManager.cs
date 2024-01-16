@@ -332,8 +332,13 @@ public class HSelectorManager : Singleton<HSelectorManager>
     public async void  unlockObject(){
 
 
-        if (lastClicked == ClickedEnum.Transform){
+        if (lastClicked == ClickedEnum.Transform)
+        {
             updateTransformBeforeUnlock();
+        }
+        else if (lastClicked == ClickedEnum.MoveEndpoint)
+        {
+            HEndEffectorTransform.Instance.deactiveEndEffectorTransform();
         }
 
         if (isSomethingLocked()) {
