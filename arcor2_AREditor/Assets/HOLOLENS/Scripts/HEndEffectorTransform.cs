@@ -14,7 +14,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public Transform newTransform;
     private HGizmo gizmo;
     HActionPoint3D tmpModel;
+    public GameObject confirmationWindow;
+    public Interactable confirmButton;
+    public Interactable resetButton;
 
+    private Vector3 endEffectorPosition;
+    private Quaternion endEffectorRotation;
     private bool isPressed;
     private bool isManipulating = false;
 
@@ -23,23 +28,43 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         isPressed = false;
         newTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
-        newTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => isManipulating = true);
+        newTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
+        confirmButton.OnClick.AddListener(() => confirmClicked());
+        resetButton.OnClick.AddListener(() => resetClicked());
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (isManipulating)
-        {
-            Debug.Log("MANIPULATING");
-        }
+        
     }
 
 
     public void updatePosition()
     {
-        Debug.Log("Manipulation ENDED!!!");
         isManipulating = false;
+
+        //TODO after setting position show popup window for confirmation
+        Vector3 vec = new Vector3(0.1f, 0.08f, 0.0f);
+        confirmationWindow.transform.position = tmpModel.transform.position + vec;
+        confirmationWindow.gameObject.SetActive(true);
+    }
+
+    public void manipulation()
+    {
+        isManipulating = true;
+        confirmationWindow.gameObject.SetActive(false);
+    }
+
+    public void confirmClicked()
+    {
+
+    }
+
+    public void resetClicked()
+    {
+        confirmationWindow.gameObject.SetActive(false);
+        newTransform.position = endEffectorPosition;
     }
 
     public async void activeEndEffectorTranform(HInteractiveObject robot)
@@ -54,8 +79,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 parent = kvp;
             }
 
+            endEffectorPosition = parent.transform.position;
+            endEffectorRotation = parent.transform.rotation;
+
             // create new action point for manipulation
-            tmpModel = Instantiate(point, parent.transform.position, parent.transform.rotation);
+            tmpModel = Instantiate(point, endEffectorPosition, endEffectorRotation);
 
             newTransform.transform.position = tmpModel.transform.position;
             newTransform.transform.localScale = new Vector3(1f, 1f, 1f);
@@ -64,7 +92,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             tmpModel.setInterarction(newTransform.gameObject);
             tmpModel.EnableOffscreenIndicator(false);
             newTransform.gameObject.SetActive(true);
-
 
             // create gizmo model for manipulation
             gizmo = Instantiate(gizmoPrefab).GetComponent<HGizmo>();
@@ -86,19 +113,18 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             
             foreach (ObjectManipulator objectManipulator in o) {
                 objectManipulator.HostTransform = newTransform;
-                objectManipulator.OnManipulationStarted.AddListener((s) => isManipulating = true);
+                objectManipulator.OnManipulationStarted.AddListener((s) => manipulation());
                 objectManipulator.OnManipulationEnded.AddListener((s) => updatePosition());
             }
         }
     }
 
-    public void deactiveEndEffectorTransform()
-    {
-        Destroy(tmpModel);
-        tmpModel = null;
-        Destroy(gizmo);
-        gizmo = null;
+    public void deactiveEndEffectorTransform() {
         newTransform.gameObject.SetActive(false);
+        Destroy(tmpModel.gameObject);
+        Destroy(gizmo.gameObject);
+        tmpModel = null;
+        gizmo = null;
     }
 
     public async void MoveModel()

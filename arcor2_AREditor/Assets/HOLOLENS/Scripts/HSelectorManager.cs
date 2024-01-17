@@ -75,6 +75,10 @@ public class HSelectorManager : Singleton<HSelectorManager>
         return  lastClicked == ClickedEnum.AddAP;
     }
 
+    public bool isClickedMoveEndPoint() {
+        return lastClicked == ClickedEnum.MoveEndpoint;
+    }
+
     public void setSelectedAction(UnityAction selectedAction) {   
         AddActionPointHandler.Instance.unregisterHandlers();
         this.selectedAction = selectedAction;
@@ -198,7 +202,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
 
     public void moveEndpointClicked()
     {
-        if (selectedObject is RobotActionObjectH) {
+        if (selectedObject is RobotActionObjectH robot) {
             moveEndpoint();
             setLastClicked(ClickedEnum.MoveEndpoint);
         }
@@ -335,10 +339,6 @@ public class HSelectorManager : Singleton<HSelectorManager>
         if (lastClicked == ClickedEnum.Transform)
         {
             updateTransformBeforeUnlock();
-        }
-        else if (lastClicked == ClickedEnum.MoveEndpoint)
-        {
-            HEndEffectorTransform.Instance.deactiveEndEffectorTransform();
         }
 
         if (isSomethingLocked()) {

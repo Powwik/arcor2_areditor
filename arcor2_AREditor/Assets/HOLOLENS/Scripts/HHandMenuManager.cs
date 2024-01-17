@@ -207,6 +207,10 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
 
     public void UnselectMoveEndpoint() {
 
+        if (HSelectorManager.Instance.isClickedMoveEndPoint()) {
+            HEndEffectorTransform.Instance.deactiveEndEffectorTransform();
+        }
+
         HSelectorManager.Instance.setSelectedAction(null);
 
         if (HSelectorManager.Instance.isSomethingLocked()) {
