@@ -227,16 +227,16 @@ public abstract class HActionPoint : HInteractiveObject, IActionPointParentH
             }
             throw new KeyNotFoundException("Orientation with id " + id + " not found.");
         }
-/*
-        public List<APOrientation> GetOrientationsVisuals() {
-            List<APOrientation> orientationsList = new List<APOrientation>();
-            foreach (Transform transform in orientations.transform) {
-                APOrientation o = transform.GetComponent<APOrientation>();
-                if (o != null)
-                    orientationsList.Add(o);
-            }
-            return orientationsList;
-        }
+    /*
+            public List<APOrientation> GetOrientationsVisuals() {
+                List<APOrientation> orientationsList = new List<APOrientation>();
+                foreach (Transform transform in orientations.transform) {
+                    APOrientation o = transform.GetComponent<APOrientation>();
+                    if (o != null)
+                        orientationsList.Add(o);
+                }
+                return orientationsList;
+            }*/
 
         public IO.Swagger.Model.Pose GetDefaultPose() {
             foreach (IO.Swagger.Model.NamedOrientation orientation in Data.Orientations) {
@@ -244,7 +244,7 @@ public abstract class HActionPoint : HInteractiveObject, IActionPointParentH
                     return new IO.Swagger.Model.Pose(position: Data.Position, orientation: orientation.Orientation);
             }
             throw new ItemNotFoundException();            
-        }*/
+        }
 
         //TODO: check if it works
         public IO.Swagger.Model.ProjectRobotJoints GetFirstJoints(string robot_id = null, bool valid_only = false) {

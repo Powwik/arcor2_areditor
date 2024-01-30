@@ -209,7 +209,6 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
             @event = "",
             request = ""
         };
-
         var dispatch = JsonConvert.DeserializeAnonymousType(data, dispatchType);
 
         if (dispatch?.response == null && dispatch?.request == null && dispatch?.@event == null)
@@ -1352,26 +1351,41 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
                 throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
         }
 
-       /*      /// <summary>
-        /// Decodes package state
-        /// </summary>
-        /// <param name="obj"></param>
-        private void HandlePackageState(string obj) {
-            IO.Swagger.Model.PackageState projectState = JsonConvert.DeserializeObject<IO.Swagger.Model.PackageState>(obj);
-            GameManagerH.Instance.PackageStateUpdated(projectState.Data);
-        }
+    /*      /// <summary>
+     /// Decodes package state
+     /// </summary>
+     /// <param name="obj"></param>
+     private void HandlePackageState(string obj) {
+         IO.Swagger.Model.PackageState projectState = JsonConvert.DeserializeObject<IO.Swagger.Model.PackageState>(obj);
+         GameManagerH.Instance.PackageStateUpdated(projectState.Data);
+     }
 
-        /// <summary>
-        /// Decodes package info
-        /// </summary>
-        /// <param name="obj">Message from server</param>
-        private void HandlePackageInfo(string obj) {
-            IO.Swagger.Model.PackageInfo packageInfo = JsonConvert.DeserializeObject<IO.Swagger.Model.PackageInfo>(obj);
-            GameManagerH.Instance.PackageInfo = packageInfo.Data;
-        }
+     /// <summary>
+     /// Decodes package info
+     /// </summary>
+     /// <param name="obj">Message from server</param>
+     private void HandlePackageInfo(string obj) {
+         IO.Swagger.Model.PackageInfo packageInfo = JsonConvert.DeserializeObject<IO.Swagger.Model.PackageInfo>(obj);
+         GameManagerH.Instance.PackageInfo = packageInfo.Data;
+     }
 
 */
+    public async Task<List<IO.Swagger.Model.Joint>> InverseKinematics(string robotId, string endEffectorId, bool avoidCollisions, IO.Swagger.Model.Pose pose, List<IO.Swagger.Model.Joint> startJoints) {
+        int r_id = Interlocked.Increment(ref requestID);
+        
+        IO.Swagger.Model.InverseKinematicsRequestArgs args = new InverseKinematicsRequestArgs(robotId: robotId,
+            endEffectorId: endEffectorId, pose: pose, avoidCollisions: avoidCollisions, startJoints: startJoints, armId: "");
 
+        IO.Swagger.Model.InverseKinematicsRequest request = new IO.Swagger.Model.InverseKinematicsRequest(r_id, "InverseKinematics", args: args);
+        SendDataToServer(request.ToJson(), r_id, true);
+        IO.Swagger.Model.InverseKinematicsResponse response = await WaitForResult<IO.Swagger.Model.InverseKinematicsResponse>(r_id);
+
+        if (response == null || !response.Result) {
+            throw new RequestFailedException(response == null ? new List<string>() { "Failed to delete override of object parameter" } : response.Messages);
+        } else {
+            return response.Data;
+        }
+    }
 
 
 }

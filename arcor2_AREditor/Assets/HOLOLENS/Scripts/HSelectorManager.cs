@@ -202,7 +202,8 @@ public class HSelectorManager : Singleton<HSelectorManager>
 
     public void moveEndpointClicked()
     {
-        if (selectedObject is RobotActionObjectH robot) {
+        if (selectedObject is RobotActionObjectH robot)
+        {
             moveEndpoint();
             setLastClicked(ClickedEnum.MoveEndpoint);
         }
@@ -211,10 +212,14 @@ public class HSelectorManager : Singleton<HSelectorManager>
             Debug.Log("CHOOSE ROBOT...");
         }
     }
-    public async void moveEndpoint() {
-        if (SceneManagerH.Instance.SceneStarted) {
+    public async void moveEndpoint()
+    {
+        if (SceneManagerH.Instance.SceneStarted)
+        {
             HEndEffectorTransform.Instance.activeEndEffectorTranform(selectedObject);
-        } else {
+        }
+        else
+        {
             Debug.Log("TURN ON ONLINE MODE");
         }
     }

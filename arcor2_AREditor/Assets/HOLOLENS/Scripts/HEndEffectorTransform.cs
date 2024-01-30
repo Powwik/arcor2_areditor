@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Base;
 using Hololens;
 using IO.Swagger.Model;
 using Microsoft.MixedReality.Toolkit.UI;
 using UnityEngine;
 using UnityEngine.Animations;
+using UnityEngine.UIElements;
 
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
@@ -23,6 +25,9 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     private bool isPressed;
     private bool isManipulating = false;
 
+    public HIRobot selectedRobot;
+    public HRobotEE selectedEndEffector;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -36,7 +41,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     // Update is called once per frame
     void Update()
     {
-        
     }
 
 
@@ -44,9 +48,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         isManipulating = false;
 
-        //TODO after setting position show popup window for confirmation
+        // set position of the confirmation window
         Vector3 vec = new Vector3(0.1f, 0.08f, 0.0f);
         confirmationWindow.transform.position = tmpModel.transform.position + vec;
+
         confirmationWindow.gameObject.SetActive(true);
     }
 
@@ -58,7 +63,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public void confirmClicked()
     {
-
+        MoveModel();
     }
 
     public void resetClicked()
@@ -69,14 +74,20 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void activeEndEffectorTranform(HInteractiveObject robot)
     {
+        selectedRobot = (RobotActionObjectH) robot;
         if (!isPressed)
         {
             isPressed = false;
             Dictionary<string, List<HRobotEE>> end = robot.GetComponent<RobotActionObjectH>().EndEffectors;
             HRobotEE parent = null;
-        
+            List<HRobotEE> ee = await selectedRobot.GetAllEE();
+            selectedEndEffector = ee[0];
+            //selectedRobot.GetTransform().
+            
+            
             foreach (var kvp in end["default"]) {
                 parent = kvp;
+                //selectedEndEffector = parent;
             }
 
             endEffectorPosition = parent.transform.position;
@@ -129,25 +140,26 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void MoveModel()
     {
-        List<IO.Swagger.Model.Joint> modelJoints; //joints to move the model to
-        //string robotId;
-
         try {
-            //IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: orientation.Orientation, position: DataHelper.Vector3ToPosition(TransformConvertor.UnityToROS(CurrentActionPoint.transform.position)));
-            List<IO.Swagger.Model.Joint> startJoints = SceneManager.Instance.SelectedRobot.GetJoints();
-            Debug.Log("START JOINTS = " + startJoints);
-            //modelJoints = await WebsocketManager.Instance.InverseKinematics(SceneManager.Instance.SelectedRobot.GetId(), SceneManager.Instance.SelectedEndEffector.GetName(), true, pose, startJoints);
-            //await PrepareRobotModel(SceneManager.Instance.SelectedRobot.GetId(), false);
-            //if (!avoid_collision) {
-            //    Notifications.Instance.ShowNotification("The model is in a collision with other object!", "");
-            //}
+            Orientation orientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
+            IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: orientation, position: DataHelper.Vector3ToPosition(TransformConvertor.UnityToROS(tmpModel.transform.position)));
+            List<IO.Swagger.Model.Joint> modelJoints; //joints to move the model to
+            List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
+            Debug.Log("SELECTED ID:" + selectedRobot.GetId() + " " + selectedEndEffector.GetName());
+
+            modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
+                selectedRobot.GetId(),
+                selectedEndEffector.GetName(),
+                true,
+                pose,
+                startJoints);
+
+
+            Debug.Log("MODEL JOINTS: " + modelJoints);
         } catch (ItemNotFoundException ex) {
             Notifications.Instance.ShowNotification("Unable to move here model", ex.Message);
             return;
         } catch (RequestFailedException ex) {
-            //if (avoid_collision) //if this is first call, try it again without avoiding collisions
-            //    MoveHereModel(false);
-            //else
             Notifications.Instance.ShowNotification("Unable to move here model", ex.Message);
             return;
         }
