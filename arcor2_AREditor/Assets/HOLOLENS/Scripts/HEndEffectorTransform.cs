@@ -7,7 +7,6 @@ using IO.Swagger.Model;
 using Microsoft.MixedReality.Toolkit.UI;
 using UnityEngine;
 using UnityEngine.Animations;
-using UnityEngine.UIElements;
 
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
@@ -57,8 +56,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         Vector3 vec = new Vector3(0.1f, 0.08f, 0.0f);
         confirmationWindow.transform.position = tmpModel.transform.position + vec;
 
-        confirmationWindow.gameObject.SetActive(true);
-        //MoveModel();
+        //confirmationWindow.gameObject.SetActive(true);
     }
 
     public void manipulation()
@@ -87,9 +85,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             Dictionary<string, List<HRobotEE>> end = robot.GetComponent<RobotActionObjectH>().EndEffectors;
             HRobotEE parent = null;
             List<HRobotEE> ee = await selectedRobot.GetAllEE();
-            selectedEndEffector = ee[0];
-            //selectedRobot.GetTransform().
-            
+            selectedEndEffector = ee[0];            
             
             foreach (var kvp in end["default"]) {
                 parent = kvp;
@@ -136,7 +132,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    public void deactiveEndEffectorTransform() {
+    public void deactiveEndEffectorTransform()
+    {
         newTransform.gameObject.SetActive(false);
         confirmationWindow.SetActive(false);
         Destroy(tmpModel.gameObject);
@@ -147,10 +144,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void MoveModel()
     {
+        Orientation orientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
+        Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(tmpModel.transform.position));
+        Position position = DataHelper.Vector3ToPosition(point);
+
         try {
-            Orientation orientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
-            //Orientation orientation1 = TransformConvertor.ROSToUnity(DataHelper.QuaternionToOrientation(Quaternion.Inverse(selectedEndEffector.transform.rotation)));
-            IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: orientation, position: DataHelper.Vector3ToPosition(TransformConvertor.UnityToROS(tmpModel.transform.position)));
+            IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: orientation, position: position);
             List<IO.Swagger.Model.Joint> modelJoints; //joints to move the model to
             List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
             SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(selectedRobot.GetId());
@@ -160,9 +159,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 true,
                 pose,
                 startJoints);
-
-            //var test = TransformConvertor.UnityToROS(DataHelper.QuaternionToOrientation();
-            //Debug.Log(Quaternion.Inverse(selectedEndEffector.transform.rotation));
 
             await PrepareRobotModel(selectedRobot.GetId(), false);
 
@@ -179,11 +175,27 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    private void MoveRobot() {
+    private void MoveRobot()
+    {
+        try {
+            string armId = null;
+            if (SceneManagerH.Instance.SelectedRobot.MultiArm())
+                armId = SceneManagerH.Instance.SelectedArmId;
 
+            //await WebsocketManager.Instance.MoveToActionPointOrientation(SceneManager.Instance.SelectedRobot.GetId(), SceneManager.Instance.SelectedEndEffector.GetName(), (decimal) SpeedSlider.value, orientation.Id, (bool) SafeMove.GetValue(), armId);
+            //await WebsocketManager.Instance.MoveToActionPointJoints(joints.RobotId, (decimal) SpeedSlider.value, joints.Id, (bool) SafeMove.GetValue(), joints.ArmId);
+            
+        } catch (ItemNotFoundException ex) {
+            Notifications.Instance.ShowNotification("Failed to move robot", ex.Message);
+            return;
+        } catch (RequestFailedException ex) {
+            Notifications.Instance.ShowNotification("Failed to move robot", ex.Message);
+            return;
+        }
     }
 
-    private async Task PrepareRobotModel(string robotID, bool shadowRealRobot) {
+    private async Task PrepareRobotModel(string robotID, bool shadowRealRobot)
+    {
         if (shadowRealRobot) {
             robotVisibilityBackup.TryGetValue(robotID, out float originalVisibility);
             SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(originalVisibility);
