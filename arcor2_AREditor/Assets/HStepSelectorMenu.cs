@@ -8,6 +8,7 @@ public class HStepSelectorMenu : MonoBehaviour
     public GameObject stepSelectorMenu;
     public float step;
 
+    public Interactable stepDefaultButton;
     public Interactable step1Button;
     public Interactable step2Button;
     public Interactable step5Button;
@@ -16,6 +17,7 @@ public class HStepSelectorMenu : MonoBehaviour
     {
         //stepSelectorMenu.SetActive(false);
         step = 0;
+        stepDefaultButton.OnClick.AddListener(() => setStep(0));
         step1Button.OnClick.AddListener(() => setStep(1));
         step2Button.OnClick.AddListener(() => setStep(2));
         step5Button.OnClick.AddListener(() => setStep(5));

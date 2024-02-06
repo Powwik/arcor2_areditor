@@ -28,6 +28,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public HIRobot selectedRobot;
     public HRobotEE selectedEndEffector;
 
+    private Dictionary<string, float> robotVisibilityBackup = new Dictionary<string, float>();
+
     // Start is called before the first frame update
     void Start()
     {
@@ -41,6 +43,9 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     // Update is called once per frame
     void Update()
     {
+        if (isManipulating) {
+            MoveModel();
+        }
     }
 
 
@@ -53,6 +58,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         confirmationWindow.transform.position = tmpModel.transform.position + vec;
 
         confirmationWindow.gameObject.SetActive(true);
+        //MoveModel();
     }
 
     public void manipulation()
@@ -63,7 +69,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public void confirmClicked()
     {
-        MoveModel();
+        MoveRobot();
     }
 
     public void resetClicked()
@@ -132,6 +138,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public void deactiveEndEffectorTransform() {
         newTransform.gameObject.SetActive(false);
+        confirmationWindow.SetActive(false);
         Destroy(tmpModel.gameObject);
         Destroy(gizmo.gameObject);
         tmpModel = null;
@@ -142,11 +149,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         try {
             Orientation orientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
+            //Orientation orientation1 = TransformConvertor.ROSToUnity(DataHelper.QuaternionToOrientation(Quaternion.Inverse(selectedEndEffector.transform.rotation)));
             IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: orientation, position: DataHelper.Vector3ToPosition(TransformConvertor.UnityToROS(tmpModel.transform.position)));
             List<IO.Swagger.Model.Joint> modelJoints; //joints to move the model to
             List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
-            Debug.Log("SELECTED ID:" + selectedRobot.GetId() + " " + selectedEndEffector.GetName());
-
+            SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(selectedRobot.GetId());
             modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
                 selectedRobot.GetId(),
                 selectedEndEffector.GetName(),
@@ -154,8 +161,15 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 pose,
                 startJoints);
 
+            //var test = TransformConvertor.UnityToROS(DataHelper.QuaternionToOrientation();
+            //Debug.Log(Quaternion.Inverse(selectedEndEffector.transform.rotation));
 
-            Debug.Log("MODEL JOINTS: " + modelJoints);
+            await PrepareRobotModel(selectedRobot.GetId(), false);
+
+            foreach (IO.Swagger.Model.Joint joint in modelJoints) {
+                SceneManagerH.Instance.SelectedRobot.SetJointValue(joint.Name, (float) joint.Value);
+            }
+
         } catch (ItemNotFoundException ex) {
             Notifications.Instance.ShowNotification("Unable to move here model", ex.Message);
             return;
@@ -163,5 +177,28 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             Notifications.Instance.ShowNotification("Unable to move here model", ex.Message);
             return;
         }
+    }
+
+    private void MoveRobot() {
+
+    }
+
+    private async Task PrepareRobotModel(string robotID, bool shadowRealRobot) {
+        if (shadowRealRobot) {
+            robotVisibilityBackup.TryGetValue(robotID, out float originalVisibility);
+            SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(originalVisibility);
+        } else {
+            if (!robotVisibilityBackup.TryGetValue(robotID, out _)) {
+                robotVisibilityBackup.Add(robotID, SceneManagerH.Instance.GetActionObject(robotID).GetVisibility());
+                SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(1f);
+            }
+        }
+
+        if (SceneManagerH.Instance.SceneStarted) {
+            await WebSocketManagerH.Instance.RegisterForRobotEvent(robotID, shadowRealRobot, RegisterForRobotEventRequestArgs.WhatEnum.Joints);
+            SceneManagerH.Instance.GetRobot(robotID).SetGrey(!shadowRealRobot, true);
+            SceneManagerH.Instance.GetActionObject(robotID).SetInteractivity(shadowRealRobot);
+        }
+
     }
 }
