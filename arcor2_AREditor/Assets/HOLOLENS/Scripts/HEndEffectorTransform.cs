@@ -19,20 +19,17 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public Interactable confirmButton;
     public Interactable resetButton;
 
-    private Vector3 endEffectorPosition;
-    private Quaternion endEffectorRotation;
-    private bool isPressed;
     private bool isManipulating = false;
 
     public HIRobot selectedRobot;
     public HRobotEE selectedEndEffector;
 
-    private Dictionary<string, float> robotVisibilityBackup = new Dictionary<string, float>();
+    //private Dictionary<string, float> robotVisibilityBackup = new Dictionary<string, float>();
+    Orientation defaultOrientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
 
     // Start is called before the first frame update
     void Start()
     {
-        isPressed = false;
         newTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
         newTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
         confirmButton.OnClick.AddListener(() => confirmClicked());
@@ -56,7 +53,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         Vector3 vec = new Vector3(0.1f, 0.08f, 0.0f);
         confirmationWindow.transform.position = tmpModel.transform.position + vec;
 
-        //confirmationWindow.gameObject.SetActive(true);
+        confirmationWindow.gameObject.SetActive(true);
     }
 
     public void manipulation()
@@ -73,33 +70,39 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public void resetClicked()
     {
         confirmationWindow.gameObject.SetActive(false);
-        newTransform.position = endEffectorPosition;
+        newTransform.position = selectedEndEffector.transform.position;
+        Vector3 p = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(selectedEndEffector.transform.position));
+        Position position = DataHelper.Vector3ToPosition(p);
+        SetIKToModel(defaultOrientation, position);
     }
 
     public async void activeEndEffectorTranform(HInteractiveObject robot)
     {
-        selectedRobot = (RobotActionObjectH) robot;
-        if (!isPressed)
+        // set default pose for the previously selected robot
+        if (selectedRobot != (RobotActionObjectH) robot && selectedRobot != null)
         {
-            isPressed = false;
-            Dictionary<string, List<HRobotEE>> end = robot.GetComponent<RobotActionObjectH>().EndEffectors;
-            HRobotEE parent = null;
-            List<HRobotEE> ee = await selectedRobot.GetAllEE();
-            selectedEndEffector = ee[0];            
-            
-            foreach (var kvp in end["default"]) {
-                parent = kvp;
-                //selectedEndEffector = parent;
-            }
+            Vector3 p = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(selectedEndEffector.transform.position));
+            Position position = DataHelper.Vector3ToPosition(p);
+            SetIKToModel(defaultOrientation, position);
+        }
 
-            endEffectorPosition = parent.transform.position;
-            endEffectorRotation = parent.transform.rotation;
+        if (selectedRobot != (RobotActionObjectH) robot)
+        {
+            if (gizmo)
+                Destroy(gizmo.gameObject);
+            if(tmpModel)
+                Destroy(tmpModel.gameObject);
+
+            selectedRobot = (RobotActionObjectH) robot;
+            List<HRobotEE> ee = await selectedRobot.GetAllEE();
+            selectedEndEffector = ee[0];
 
             // create new action point for manipulation
-            tmpModel = Instantiate(point, endEffectorPosition, endEffectorRotation);
+            tmpModel = Instantiate(point, selectedEndEffector.transform.position, selectedEndEffector.transform.rotation);
+            tmpModel.transform.localScale = Vector3.one / 2;
 
             newTransform.transform.position = tmpModel.transform.position;
-            newTransform.transform.localScale = new Vector3(1f, 1f, 1f);
+            newTransform.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
 
             tmpModel.transform.SetParent(newTransform);
             tmpModel.setInterarction(newTransform.gameObject);
@@ -144,16 +147,19 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void MoveModel()
     {
-        Orientation orientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
         Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(tmpModel.transform.position));
         Position position = DataHelper.Vector3ToPosition(point);
 
+        SetIKToModel(defaultOrientation, position);
+    }
+
+    private async void SetIKToModel(Orientation or, Position pos)
+    {
         try {
-            IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: orientation, position: position);
-            List<IO.Swagger.Model.Joint> modelJoints; //joints to move the model to
+            IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: or, position: pos);
             List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
             SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(selectedRobot.GetId());
-            modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
+            List<IO.Swagger.Model.Joint> modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
                 selectedRobot.GetId(),
                 selectedEndEffector.GetName(),
                 true,
@@ -196,21 +202,21 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     private async Task PrepareRobotModel(string robotID, bool shadowRealRobot)
     {
-        if (shadowRealRobot) {
-            robotVisibilityBackup.TryGetValue(robotID, out float originalVisibility);
-            SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(originalVisibility);
-        } else {
-            if (!robotVisibilityBackup.TryGetValue(robotID, out _)) {
-                robotVisibilityBackup.Add(robotID, SceneManagerH.Instance.GetActionObject(robotID).GetVisibility());
-                SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(1f);
-            }
-        }
+        //if (shadowRealRobot) {
+        //    robotVisibilityBackup.TryGetValue(robotID, out float originalVisibility);
+        //    SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(originalVisibility);
+        //} else {
+        //    if (!robotVisibilityBackup.TryGetValue(robotID, out _)) {
+        //        robotVisibilityBackup.Add(robotID, SceneManagerH.Instance.GetActionObject(robotID).GetVisibility());
+        //        SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(1f);
+        //    }
+        //}
 
         if (SceneManagerH.Instance.SceneStarted) {
             await WebSocketManagerH.Instance.RegisterForRobotEvent(robotID, shadowRealRobot, RegisterForRobotEventRequestArgs.WhatEnum.Joints);
             SceneManagerH.Instance.GetRobot(robotID).SetGrey(!shadowRealRobot, true);
-            SceneManagerH.Instance.GetActionObject(robotID).SetInteractivity(shadowRealRobot);
+            //SceneManagerH.Instance.GetActionObject(robotID).SetInteractivity(shadowRealRobot);
         }
-
+        //await WebSocketManagerH.Instance.RegisterForRobotEvent(robotID, shadowRealRobot, RegisterForRobotEventRequestArgs.WhatEnum.Joints);
     }
 }
