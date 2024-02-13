@@ -1388,5 +1388,28 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
     }
 
 
+    public async Task MoveToActionPointJoints(string robotId, decimal speed, string jointsId, bool safe, string armId = null) {
+        int r_id = Interlocked.Increment(ref requestID);
+        IO.Swagger.Model.MoveToActionPointRequestArgs args = new IO.Swagger.Model.MoveToActionPointRequestArgs(robotId: robotId, endEffectorId: null, speed: speed, orientationId: null, jointsId: jointsId, safe: safe, armId: armId);
+        IO.Swagger.Model.MoveToActionPointRequest request = new IO.Swagger.Model.MoveToActionPointRequest(r_id, "MoveToActionPoint", args);
+        SendDataToServer(request.ToJson(), r_id, true);
+        IO.Swagger.Model.RenameActionPointJointsResponse response = await WaitForResult<IO.Swagger.Model.RenameActionPointJointsResponse>(r_id);
+        Debug.Log("RESPONSE: " + response);
+        Debug.Log("RESPONSE: " + response.Messages);
+        if (response == null || !response.Result)
+            throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
+    }
+
+    public async Task MoveToActionPointOrientation(string robotId, string endEffectorId, decimal speed, string orientationId, bool safe, string armId = null) {
+        int r_id = Interlocked.Increment(ref requestID);
+        IO.Swagger.Model.MoveToActionPointRequestArgs args = new IO.Swagger.Model.MoveToActionPointRequestArgs(robotId: robotId, endEffectorId: endEffectorId, speed: speed, orientationId: orientationId, jointsId: null, safe: safe, armId: armId);
+        IO.Swagger.Model.MoveToActionPointRequest request = new IO.Swagger.Model.MoveToActionPointRequest(r_id, "MoveToActionPoint", args);
+        SendDataToServer(request.ToJson(), r_id, true);
+        IO.Swagger.Model.MoveToActionPointResponse response = await WaitForResult<IO.Swagger.Model.MoveToActionPointResponse>(r_id);
+        Debug.Log("RESPONSE: " + response.Messages);
+        if (response == null || !response.Result)
+            throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
+    }
+
 }
 
