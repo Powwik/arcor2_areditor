@@ -1,34 +1,49 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Base;
 using IO.Swagger.Model;
 using Microsoft.MixedReality.Toolkit.UI;
+using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class HStepSelectorMenu : MonoBehaviour
+public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
 {
     public GameObject stepSelectorMenu;
     public float step;
-    public TextMeshPro text;
-    public Interactable stepDefaultButton;
+    public float unit;
+    private string unitsString;
+    private string realValue;
+    public TextMeshPro axisText;
+    public TextMeshPro stepText;
     public Interactable step1Button;
     public Interactable step2Button;
     public Interactable step5Button;
-
     public Interactable positiveButton;
     public Interactable negativeButton;
+    public Interactable mmButton;
+    public Interactable cmButton;
+    public Interactable dmButton;
+
     // Start is called before the first frame update
     void Start() {
         //stepSelectorMenu.SetActive(false);
-        step = 0.05f;
-        stepDefaultButton.OnClick.AddListener(() => setStep(0));
-        step1Button.OnClick.AddListener(() => setStep(1));
-        step2Button.OnClick.AddListener(() => setStep(2));
-        step5Button.OnClick.AddListener(() => setStep(5));
+        step = 1f;
+        unit = 0.01f;
+        unitsString = "cm";
+        realValue = ConvertToRealValue(unit * step);
+        step1Button.OnClick.AddListener(() => setStep(1f));
+        step2Button.OnClick.AddListener(() => setStep(2f));
+        step5Button.OnClick.AddListener(() => setStep(5f));
 
         positiveButton.OnClick.AddListener(() => MoveObject(step));
         negativeButton.OnClick.AddListener(() => MoveObject(-step));
+
+        mmButton.OnClick.AddListener(() => SetUnit("mm"));
+        cmButton.OnClick.AddListener(() => SetUnit("cm"));
+        dmButton.OnClick.AddListener(() => SetUnit("dm"));
 
         Vector3 vec = new Vector3(0.1f, 0.08f, 0.0f);
         stepSelectorMenu.transform.position = HEndEffectorTransform.Instance.newTransform.transform.position + vec;
@@ -37,20 +52,21 @@ public class HStepSelectorMenu : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        text.text = "Selected axis: " + HEndEffectorTransform.Instance.selectedAxis;
+        axisText.text = "Selected axis: " + HEndEffectorTransform.Instance.selectedAxis;
+        stepText.text = "Current step: " + realValue;
     }
 
-    private void MoveObject(float step) {
+    private void MoveObject(float s) {
 
         switch (HEndEffectorTransform.Instance.selectedAxis) {
             case Gizmo.Axis.X:
-                HEndEffectorTransform.Instance.newTransform.position += new Vector3(0.0f, 0.0f, step);
+                HEndEffectorTransform.Instance.newTransform.position += new Vector3(0.0f, 0.0f, s * unit);
                 break;
             case Gizmo.Axis.Y:
-                HEndEffectorTransform.Instance.newTransform.position += new Vector3(step, 0.0f, 0.0f);
+                HEndEffectorTransform.Instance.newTransform.position += new Vector3(s * unit, 0.0f, 0.0f);
                 break;
             case Gizmo.Axis.Z:
-                HEndEffectorTransform.Instance.newTransform.position += new Vector3(0.0f, step, 0.0f);
+                HEndEffectorTransform.Instance.newTransform.position += new Vector3(0.0f, s * unit, 0.0f);
                 break;
             default:
                 return;
@@ -63,8 +79,32 @@ public class HStepSelectorMenu : MonoBehaviour
 
 
     public void setStep(float number) {
-        Debug.Log(number);
         step = number;
+
+        realValue = ConvertToRealValue(unit * step);
     }
 
+    public void SetUnit(string units) {
+        switch(units) {
+            case ("mm"):
+                unit = 0.001f;
+                unitsString = "mm";
+                break;
+            case ("cm"):
+                unit = 0.01f;
+                unitsString = "cm";
+                break;
+            case ("dm"):
+                unit = 0.1f;
+                unitsString = "dm";
+                break;
+            default : break;
+        }
+        realValue = ConvertToRealValue(unit * step);
+    }
+
+    private string ConvertToRealValue(float value) {
+        string numberString = value.ToString();
+        return numberString[numberString.Length - 1] + unitsString;
+    }
 }

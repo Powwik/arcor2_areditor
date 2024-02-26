@@ -63,10 +63,13 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
     public event AREditorEventArgs.BareActionPointEventHandler OnActionPointBaseUpdated;
     public event AREditorEventArgs.StringEventHandler OnActionPointRemoved;
     
-        public event AREditorEventArgs.ActionPointOrientationEventHandler OnActionPointOrientationAdded;
-        public event AREditorEventArgs.ActionPointOrientationEventHandler OnActionPointOrientationUpdated;
-        public event AREditorEventArgs.ActionPointOrientationEventHandler OnActionPointOrientationBaseUpdated;
-        public event AREditorEventArgs.StringEventHandler OnActionPointOrientationRemoved;
+    public event AREditorEventArgs.ActionPointOrientationEventHandler OnActionPointOrientationAdded;
+    public event AREditorEventArgs.ActionPointOrientationEventHandler OnActionPointOrientationUpdated;
+    public event AREditorEventArgs.ActionPointOrientationEventHandler OnActionPointOrientationBaseUpdated;
+    public event AREditorEventArgs.StringEventHandler OnActionPointOrientationRemoved;
+
+    public event AREditorEventArgs.RobotMoveToPoseEventHandler OnRobotMoveToPoseEvent;
+
     /// <summary>
     /// Invoked when action item added. Contains info about the logic item.
     /// </summary>
@@ -273,13 +276,16 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
                 case "OrientationChanged":
                     HandleOrientationChanged(data);
                     break;
-              /*  case "PackageState":
-                    HandlePackageState(data);
+                case "RobotMoveToPose":
+                    HandleRobotMoveToPoseEvent(data);
                     break;
-                case "PackageInfo":
-                    HandlePackageInfo(data);
-                    break;*/
-             
+                    /*  case "PackageState":
+                          HandlePackageState(data);
+                          break;
+                      case "PackageInfo":
+                          HandlePackageInfo(data);
+                          break;*/
+
             }
         }
  
@@ -1394,8 +1400,7 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
         IO.Swagger.Model.MoveToActionPointRequest request = new IO.Swagger.Model.MoveToActionPointRequest(r_id, "MoveToActionPoint", args);
         SendDataToServer(request.ToJson(), r_id, true);
         IO.Swagger.Model.RenameActionPointJointsResponse response = await WaitForResult<IO.Swagger.Model.RenameActionPointJointsResponse>(r_id);
-        Debug.Log("RESPONSE: " + response);
-        Debug.Log("RESPONSE: " + response.Messages);
+
         if (response == null || !response.Result)
             throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
     }
@@ -1406,10 +1411,27 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
         IO.Swagger.Model.MoveToActionPointRequest request = new IO.Swagger.Model.MoveToActionPointRequest(r_id, "MoveToActionPoint", args);
         SendDataToServer(request.ToJson(), r_id, true);
         IO.Swagger.Model.MoveToActionPointResponse response = await WaitForResult<IO.Swagger.Model.MoveToActionPointResponse>(r_id);
-        Debug.Log("RESPONSE: " + response.Messages);
+
         if (response == null || !response.Result)
             throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
     }
 
+    private void HandleRobotMoveToPoseEvent(string data) {
+        RobotMoveToPose robotMoveToPoseEvent = JsonConvert.DeserializeObject<IO.Swagger.Model.RobotMoveToPose>(data);
+        OnRobotMoveToPoseEvent?.Invoke(this, new RobotMoveToPoseEventArgs(robotMoveToPoseEvent));
+        if (robotMoveToPoseEvent.Data.MoveEventType == RobotMoveToPoseData.MoveEventTypeEnum.Failed)
+            Notifications.Instance.ShowNotification("Robot failed to move", robotMoveToPoseEvent.Data.Message);
+    }
+
+    public async Task MoveToPose(string robotId, string endEffectorName, decimal speed, Position position, Orientation orientation, string armId = null) {
+        int r_id = Interlocked.Increment(ref requestID);
+        IO.Swagger.Model.MoveToPoseRequestArgs args = new IO.Swagger.Model.MoveToPoseRequestArgs(robotId: robotId, endEffectorId: endEffectorName, speed: speed, orientation: orientation, position: position, armId: armId);
+        IO.Swagger.Model.MoveToPoseRequest request = new IO.Swagger.Model.MoveToPoseRequest(r_id, "MoveToPose", args);
+        SendDataToServer(request.ToJson(), r_id, true);
+        IO.Swagger.Model.MoveToPoseResponse response = await WaitForResult<IO.Swagger.Model.MoveToPoseResponse>(r_id);
+
+        if (response == null || !response.Result)
+            throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
+    }
 }
 

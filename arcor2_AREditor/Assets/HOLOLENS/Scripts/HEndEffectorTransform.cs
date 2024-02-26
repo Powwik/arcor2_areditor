@@ -8,6 +8,7 @@ using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.Utilities;
+using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.Animations;
 
@@ -23,6 +24,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public Interactable resetButton;
 
     public Gizmo.Axis selectedAxis;
+    GameObject axis;
 
     public bool isManipulating = false;
 
@@ -105,6 +107,14 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         confirmationWindow.transform.position = tmpModel.transform.position + vec;
 
         confirmationWindow.gameObject.SetActive(true);
+
+        if (selectedAxis != Gizmo.Axis.NONE) {
+            Debug.Log("Gameobject: " + axis);
+            Vector3 objectPosition = axis.transform.GetChild(0).position;
+            HStepSelectorMenu.Instance.stepSelectorMenu.transform.position = objectPosition;
+            
+            HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(true);
+        }
     }
 
     public void manipulation()
@@ -128,8 +138,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                     selectedAxis = Gizmo.Axis.NONE;
                     break;
             }
-        }
 
+            if (selectedAxis != Gizmo.Axis.NONE)
+                axis = focusedObject.transform.parent.gameObject;
+        }
+        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         confirmationWindow.gameObject.SetActive(false);
     }
 
@@ -141,6 +154,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public void resetClicked()
     {
         confirmationWindow.gameObject.SetActive(false);
+        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         newTransform.position = selectedEndEffector.transform.position;
         Vector3 p = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(selectedEndEffector.transform.position));
         Position position = DataHelper.Vector3ToPosition(p);
@@ -261,9 +275,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             if (SceneManagerH.Instance.SelectedRobot.MultiArm())
                 armId = SceneManagerH.Instance.SelectedArmId;
 
-            //await WebSocketManagerH.Instance.MoveToActionPointOrientation(selectedRobot.GetId(), selectedEndEffector.GetName(), 10.0m, "test", true, armId);
-            await WebSocketManagerH.Instance.MoveToActionPointJoints(joints.RobotId, 5.0m, joints.Id, true, joints.ArmId);
-            
+            Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(tmpModel.transform.position));
+            Position position = DataHelper.Vector3ToPosition(point);
+
+            await WebSocketManagerH.Instance.MoveToPose(selectedRobot.GetId(), selectedEndEffector.GetName(), 1.0m, position, defaultOrientation);
+
         } catch (ItemNotFoundException ex) {
             Notifications.Instance.ShowNotification("Failed to move robot", ex.Message);
             return;
