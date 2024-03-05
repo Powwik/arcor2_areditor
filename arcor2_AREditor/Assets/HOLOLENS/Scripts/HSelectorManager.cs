@@ -30,6 +30,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
 
     private HAction Output;
 
+    public GameObject notificationWindow;
  
     public enum ClickedEnum {
         MoveEndpoint,
@@ -185,7 +186,6 @@ public class HSelectorManager : Singleton<HSelectorManager>
           Output = null;
           selectedAction = addOutputConnctionClicked;
           setLastClicked(ClickedEnum.AddInputConection);
-
     }
 
 
@@ -209,7 +209,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
         }
         else
         {
-            Debug.Log("CHOOSE ROBOT...");
+            HNotificationWindow.Instance.ShowNotification("Please select a robot to proceed.");
         }
     }
     public async void moveEndpoint()
@@ -220,9 +220,42 @@ public class HSelectorManager : Singleton<HSelectorManager>
         }
         else
         {
-            Debug.Log("TURN ON ONLINE MODE");
+            HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
         }
     }
+
+    public void moveEndpointClicked2() {
+        if (selectedObject is RobotActionObjectH robot) {
+            moveEndpoint2();
+            setLastClicked(ClickedEnum.MoveEndpoint);
+        } else {
+            HNotificationWindow.Instance.ShowNotification("Please select a robot to proceed.");
+        }
+    }
+    public async void moveEndpoint2() {
+        if (SceneManagerH.Instance.SceneStarted) {
+            HEndEffectorTransform2.Instance.activeEndEffectorTranform2(selectedObject);
+        } else {
+            HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
+        }
+    }
+
+    public void moveEndpointClicked3() {
+        if (selectedObject is RobotActionObjectH robot) {
+            moveEndpoint3();
+            setLastClicked(ClickedEnum.MoveEndpoint);
+        } else {
+            HNotificationWindow.Instance.ShowNotification("Please select a robot to proceed.");
+        }
+    }
+    public async void moveEndpoint3() {
+        if (SceneManagerH.Instance.SceneStarted) {
+            HEndEffectorTransform3.Instance.activeEndEffectorTranform3(selectedObject);
+        } else {
+            HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
+        }
+    }
+
 
     public void transformClicked()
     {

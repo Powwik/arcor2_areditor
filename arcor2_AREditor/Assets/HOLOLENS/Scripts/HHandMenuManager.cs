@@ -19,6 +19,8 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
 {
     // Start is called before the first frame update
     public GameObject moveEndpointButton;
+    public GameObject moveEndpointButton2;
+    public GameObject moveEndpointButton3;
 
     public GameObject transfomButton;
     public GameObject copyObjectButton;
@@ -52,6 +54,8 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
 
     public enum AllClickedEnum {
         MoveEndpoint,
+        MoveEndpoint2,
+        MoveEndpoint3,
         Transform,
         Delete,
         Rename,
@@ -103,6 +107,8 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         actualClick = AllClickedEnum.None;
 
         listOfPreviousActions.Add(AllClickedEnum.MoveEndpoint, UnselectMoveEndpoint);
+        listOfPreviousActions.Add(AllClickedEnum.MoveEndpoint2, UnselectMoveEndpoint2);
+        listOfPreviousActions.Add(AllClickedEnum.MoveEndpoint3, UnselectMoveEndpoint3);
         listOfPreviousActions.Add(AllClickedEnum.Transform, UnselectTransform);   
         listOfPreviousActions.Add(AllClickedEnum.AddAP, UnselectAddActionPoint);   
         listOfPreviousActions.Add(AllClickedEnum.AddConnection, UnselectAddConnection);   
@@ -114,6 +120,8 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         listOfPreviousActions.Add(AllClickedEnum.AllMore, UnselectAddMore);
 
         listOfNextActions.Add(AllClickedEnum.MoveEndpoint, (() => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.moveEndpointClicked)));
+        listOfNextActions.Add(AllClickedEnum.MoveEndpoint2, (() => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.moveEndpointClicked2)));
+        listOfNextActions.Add(AllClickedEnum.MoveEndpoint3, (() => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.moveEndpointClicked3)));
         listOfNextActions.Add(AllClickedEnum.Transform, ( () => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.transformClicked) ) );
         listOfNextActions.Add(AllClickedEnum.Delete,  ( () => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.deleteClicked) ));
         listOfNextActions.Add(AllClickedEnum.Copy,  ( () => HSelectorManager.Instance.setSelectedAction(HSelectorManager.Instance.copyObjectClicked) ));
@@ -128,6 +136,8 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
 
         /**ALL BUTTONS*/
         moveEndpointButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.MoveEndpoint));
+        moveEndpointButton2.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.MoveEndpoint2));
+        moveEndpointButton3.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.MoveEndpoint3));
         transfomButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.Transform));
         deleteButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.Delete));
         copyObjectButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.Copy));
@@ -209,6 +219,42 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
 
         if (HSelectorManager.Instance.isClickedMoveEndPoint()) {
             HEndEffectorTransform.Instance.deactiveEndEffectorTransform();
+        }
+
+        HSelectorManager.Instance.setSelectedAction(null);
+
+        if (HSelectorManager.Instance.isSomethingLocked()) {
+            HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
+            HSelectorManager.Instance.unlockObject();
+        } else {
+            HSelectorManager.Instance.updateTransformBeforeUnlock();
+            if (listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)) {
+                nextAction?.Invoke();
+            }
+        }
+    }
+    public void UnselectMoveEndpoint2() {
+
+        if (HSelectorManager.Instance.isClickedMoveEndPoint()) {
+            HEndEffectorTransform2.Instance.deactiveEndEffectorTransform2();
+        }
+
+        HSelectorManager.Instance.setSelectedAction(null);
+
+        if (HSelectorManager.Instance.isSomethingLocked()) {
+            HLockingEventCache.Instance.OnObjectLockingEvent += OnObjectLockingEvent;
+            HSelectorManager.Instance.unlockObject();
+        } else {
+            HSelectorManager.Instance.updateTransformBeforeUnlock();
+            if (listOfNextActions.TryGetValue(actualClick, out UnityAction nextAction)) {
+                nextAction?.Invoke();
+            }
+        }
+    }
+    public void UnselectMoveEndpoint3() {
+
+        if (HSelectorManager.Instance.isClickedMoveEndPoint()) {
+            HEndEffectorTransform3.Instance.deactiveEndEffectorTransform3();
         }
 
         HSelectorManager.Instance.setSelectedAction(null);

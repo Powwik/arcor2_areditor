@@ -11,19 +11,19 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.InputSystem.Utilities;
 
-public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
-{
+public class HEndEffectorTransform3 : Singleton<HEndEffectorTransform3> {
     public HActionPoint3D point;
     public GameObject gizmoPrefab;
+    public GameObject emptyGizmoPrefab;
     public Transform gizmoTransform;
     private HGizmo gizmo;
+    private GameObject slowGizmo;
     public HActionPoint3D tmpModel;
     public GameObject confirmationWindow;
     public Interactable confirmButton;
     public Interactable resetButton;
 
     public Gizmo.Axis selectedAxis;
-    GameObject axis;
 
     public bool isManipulating = false;
     public bool canMove = true;
@@ -31,17 +31,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public HIRobot selectedRobot;
     public HRobotEE selectedEndEffector;
 
-    private Transform lastValidPosition;
-
-
-    float deltaTime = 0.0f;
-
     //private Dictionary<string, float> robotVisibilityBackup = new Dictionary<string, float>();
     public Orientation defaultOrientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
 
     // Start is called before the first frame update
-    void Start()
-    {
+    void Start() {
         confirmButton.OnClick.AddListener(() => confirmClicked());
         resetButton.OnClick.AddListener(() => resetClicked());
         selectedAxis = Gizmo.Axis.NONE;
@@ -53,26 +47,29 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         {
             MoveModel();
         }
-        deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
     }
 
-
-    public void updatePosition()
-    {
+    public void updatePosition() {
         isManipulating = false;
         // set position of the confirmation window
-        Vector3 vec = gizmoTransform.position + new Vector3(0.0f, 0.3f, 0.0f);
+        Vector3 vec = gizmoTransform.position + new Vector3(0.0f, 0.35f, 0.0f);
         confirmationWindow.transform.position = vec;
         confirmationWindow.gameObject.SetActive(true);
 
-        Vector3 selectorVector = gizmoTransform.position + new Vector3(0.12f, 0.3f, 0.4f);
-        HStepSelectorMenu.Instance.stepSelectorMenu.transform.position = selectorVector;
-        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(true);
+        Vector3 stepMenuVector = gizmoTransform.position + new Vector3(0.0f, 0.25f, 0.0f);
+        HStepSelectorMenu3.Instance.stepMenu.transform.position = stepMenuVector;
+        HStepSelectorMenu3.Instance.stepMenu.SetActive(true);
+
+        gizmoTransform.position = slowGizmo.transform.position;
+        slowGizmo.transform.position = gizmoTransform.position;
+
         
+        foreach (var render in tmpModel.transform.GetComponentsInChildren<Renderer>()) {
+            render.enabled = true;
+        }
     }
 
-    public void manipulation()
-    {
+    public void manipulation() {
         isManipulating = true;
 
         IMixedRealityPointer pointer = CoreServices.InputSystem.FocusProvider.PrimaryPointer;
@@ -92,48 +89,46 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                     selectedAxis = Gizmo.Axis.NONE;
                     break;
             }
-
-            if (selectedAxis != Gizmo.Axis.NONE)
-                axis = focusedObject.transform.parent.gameObject;
         }
-        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
+        HStepSelectorMenu3.Instance.stepMenu.SetActive(false);
         confirmationWindow.gameObject.SetActive(false);
+
+        foreach (var render in tmpModel.transform.GetComponentsInChildren<Renderer>()) {
+            render.enabled = false;
+        }
     }
 
-    public void confirmClicked()
-    {
+    public void confirmClicked() {
         MoveRobot();
     }
 
-    public void resetClicked()
-    {
+    public void resetClicked() {
         confirmationWindow.gameObject.SetActive(false);
         HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         gizmoTransform.position = selectedEndEffector.transform.position;
+        slowGizmo.transform.position = selectedEndEffector.transform.position;
         Vector3 p = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(selectedEndEffector.transform.position));
         Position position = DataHelper.Vector3ToPosition(p);
         SetIKToModel(defaultOrientation, position);
     }
 
-    public async void activeEndEffectorTranform(HInteractiveObject robot)
-    {
+    public async void activeEndEffectorTranform3(HInteractiveObject robot) {
+        HStepSelectorMenu3.Instance.stepMenu.SetActive(true);
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
         
 
         // set default pose for the previously selected robot
-        if (selectedRobot != (RobotActionObjectH) robot && selectedRobot != null)
-        {
+        if (selectedRobot != (RobotActionObjectH) robot && selectedRobot != null) {
             Vector3 p = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(selectedEndEffector.transform.position));
             Position position = DataHelper.Vector3ToPosition(p);
             SetIKToModel(defaultOrientation, position);
         }
 
-        if (selectedRobot != (RobotActionObjectH) robot)
-        {
+        if (selectedRobot != (RobotActionObjectH) robot) {
             if (gizmo)
                 Destroy(gizmo.gameObject);
-            if(tmpModel)
+            if (tmpModel)
                 Destroy(tmpModel.gameObject);
 
             selectedRobot = (RobotActionObjectH) robot;
@@ -155,15 +150,22 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             // create gizmo model for manipulation
             gizmo = Instantiate(gizmoPrefab).GetComponent<HGizmo>();
             gizmo.transform.SetParent(tmpModel.transform);
-
-            gizmo.transform.localScale = new Vector3(0.1f / tmpModel.transform.localScale.x, 0.1f / tmpModel.transform.localScale.y, 0.1f / tmpModel.transform.localScale.z);
+            gizmo.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
             gizmo.transform.localPosition = Vector3.zero;
             gizmo.transform.eulerAngles = tmpModel.transform.eulerAngles;
             gizmo.SetXDelta(0);
             gizmo.SetYDelta(0);
             gizmo.SetZDelta(0);
-            
+
+            slowGizmo = Instantiate(emptyGizmoPrefab);
+            slowGizmo.transform.position = tmpModel.transform.position;
+            slowGizmo.gameObject.GetComponent<FollowObject>().SetFollowingObject(gizmoTransform.gameObject);
+            slowGizmo.transform.eulerAngles = gizmo.transform.eulerAngles;
+            slowGizmo.transform.eulerAngles += new Vector3(0.0f, -145.545f, 180.0f);
+            slowGizmo.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
+
+
             ConstraintSource source = new ConstraintSource {
                 sourceTransform = gizmoTransform
             };
@@ -182,30 +184,29 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         SetIKToModel(defaultOrientation, position1);
     }
 
-    public void deactiveEndEffectorTransform()
-    {
+    public void deactiveEndEffectorTransform3() {
         gizmoTransform.gameObject.SetActive(false);
         confirmationWindow.SetActive(false);
         Destroy(tmpModel.gameObject);
         Destroy(gizmo.gameObject);
+        Destroy(slowGizmo.gameObject);
+        slowGizmo = null;
         tmpModel = null;
         gizmo = null;
         selectedRobot = null;
-        HStepSelectorMenu.Instance.stepSelectorMenu.gameObject.SetActive(false);
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
+        HStepSelectorMenu3.Instance.stepMenu.SetActive(false);
     }
 
-    public async void MoveModel()
-    {
-        Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(tmpModel.transform.position));
+    public async void MoveModel() {
+        Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(slowGizmo.transform.position));
         Position position = DataHelper.Vector3ToPosition(point);
 
         SetIKToModel(defaultOrientation, position);
     }
 
-    public async void SetIKToModel(Orientation or, Position pos)
-    {
+    public async void SetIKToModel(Orientation or, Position pos) {
         try {
             IO.Swagger.Model.Pose pose = new IO.Swagger.Model.Pose(orientation: or, position: pos);
             List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
@@ -232,13 +233,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    void OnGUI() {
-        int fps = Mathf.RoundToInt(1.0f / deltaTime);
-        GUI.Label(new Rect(10, 10, 100, 20), "FPS: " + fps);
-    }
-
-    private async void MoveRobot()
-    {
+    private async void MoveRobot() {
         try {
             string armId = null;
             if (SceneManagerH.Instance.SelectedRobot.MultiArm())
@@ -258,8 +253,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    private async Task PrepareRobotModel(string robotID, bool shadowRealRobot)
-    {
+    private async Task PrepareRobotModel(string robotID, bool shadowRealRobot) {
         //if (shadowRealRobot) {
         //    robotVisibilityBackup.TryGetValue(robotID, out float originalVisibility);
         //    SceneManagerH.Instance.GetActionObject(robotID).SetVisibility(originalVisibility);

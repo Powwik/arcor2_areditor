@@ -29,7 +29,7 @@ public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
 
     // Start is called before the first frame update
     void Start() {
-        //stepSelectorMenu.SetActive(false);
+        stepSelectorMenu.SetActive(false);
         step = 1f;
         unit = 0.01f;
         unitsString = "cm";
@@ -44,9 +44,6 @@ public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
         mmButton.OnClick.AddListener(() => SetUnit("mm"));
         cmButton.OnClick.AddListener(() => SetUnit("cm"));
         dmButton.OnClick.AddListener(() => SetUnit("dm"));
-
-        Vector3 vec = new Vector3(0.1f, 0.08f, 0.0f);
-        stepSelectorMenu.transform.position = HEndEffectorTransform.Instance.newTransform.transform.position + vec;
     }
 
     // Update is called once per frame
@@ -60,13 +57,13 @@ public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
 
         switch (HEndEffectorTransform.Instance.selectedAxis) {
             case Gizmo.Axis.X:
-                HEndEffectorTransform.Instance.newTransform.position += new Vector3(0.0f, 0.0f, s * unit);
+                HEndEffectorTransform.Instance.gizmoTransform.position += new Vector3(0.0f, 0.0f, s * unit);
                 break;
             case Gizmo.Axis.Y:
-                HEndEffectorTransform.Instance.newTransform.position += new Vector3(s * unit, 0.0f, 0.0f);
+                HEndEffectorTransform.Instance.gizmoTransform.position += new Vector3(s * unit, 0.0f, 0.0f);
                 break;
             case Gizmo.Axis.Z:
-                HEndEffectorTransform.Instance.newTransform.position += new Vector3(0.0f, s * unit, 0.0f);
+                HEndEffectorTransform.Instance.gizmoTransform.position += new Vector3(0.0f, s * unit, 0.0f);
                 break;
             default:
                 return;
