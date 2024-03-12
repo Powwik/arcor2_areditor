@@ -7,13 +7,13 @@ using UnityEngine;
 
 public class HStepSelectorMenu2 : Singleton<HStepSelectorMenu2> {
 
-    public GameObject UnitsMenu;
-    public GameObject ButtonsMenu;
+    public GameObject StepSelectorMenu;
     public Interactable positiveButton;
     public Interactable negativeButton;
     public Interactable mmButton;
     public Interactable cmButton;
     public float unit;
+    public GameObject sceneOrigin;
 
     // Start is called before the first frame update
     void Start()
@@ -25,9 +25,6 @@ public class HStepSelectorMenu2 : Singleton<HStepSelectorMenu2> {
 
         mmButton.OnClick.AddListener(() => SetUnit("mm"));
         cmButton.OnClick.AddListener(() => SetUnit("cm"));
-
-        UnitsMenu.SetActive(false);
-        ButtonsMenu.SetActive(false);
     }
 
     // Update is called once per frame
@@ -40,17 +37,19 @@ public class HStepSelectorMenu2 : Singleton<HStepSelectorMenu2> {
     {
         switch (HEndEffectorTransform2.Instance.selectedAxis) {
             case Gizmo.Axis.X:
-                HEndEffectorTransform2.Instance.gizmoTransform.position += new Vector3(0.0f, 0.0f, s);
+                HEndEffectorTransform2.Instance.gizmoTransform.localPosition += new Vector3(0.0f, 0.0f, s);
                 break;
             case Gizmo.Axis.Y:
-                HEndEffectorTransform2.Instance.gizmoTransform.position += new Vector3(s, 0.0f, 0.0f);
+                HEndEffectorTransform2.Instance.gizmoTransform.localPosition += new Vector3(s, 0.0f, 0.0f);
                 break;
             case Gizmo.Axis.Z:
-                HEndEffectorTransform2.Instance.gizmoTransform.position += new Vector3(0.0f, s, 0.0f);
+                HEndEffectorTransform2.Instance.gizmoTransform.localPosition += new Vector3(0.0f, s, 0.0f);
                 break;
             default:
                 return;
         }
+        HEndEffectorTransform2.Instance.confirmationWindow.SetActive(true);
+
         Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(HEndEffectorTransform2.Instance.tmpModel.transform.position));
         Position position = DataHelper.Vector3ToPosition(point);
         HEndEffectorTransform2.Instance.SetIKToModel(HEndEffectorTransform2.Instance.defaultOrientation, position);

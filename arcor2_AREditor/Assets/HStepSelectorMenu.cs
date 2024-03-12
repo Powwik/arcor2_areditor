@@ -29,7 +29,6 @@ public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
 
     // Start is called before the first frame update
     void Start() {
-        stepSelectorMenu.SetActive(false);
         step = 1f;
         unit = 0.01f;
         unitsString = "cm";
@@ -68,6 +67,9 @@ public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
             default:
                 return;
         }
+        Vector3 vec = HEndEffectorTransform.Instance.gizmoTransform.position + new Vector3(0.0f, 0.25f, 0.0f);
+        HEndEffectorTransform.Instance.confirmationWindow.transform.position = vec;
+        HEndEffectorTransform.Instance.confirmationWindow.SetActive(true);
 
         Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(HEndEffectorTransform.Instance.tmpModel.transform.position));
         Position position = DataHelper.Vector3ToPosition(point);

@@ -7,12 +7,16 @@ using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.Utilities;
+using RosSharp.Urdf;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.InputSystem.Utilities;
 
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
+    public GameObject testingEndPoint;
+    public GameObject testingCube;
+    public Material transparentMaterial;
     public HActionPoint3D point;
     public GameObject gizmoPrefab;
     public Transform gizmoTransform;
@@ -23,7 +27,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public Interactable resetButton;
 
     public Gizmo.Axis selectedAxis;
-    GameObject axis;
 
     public bool isManipulating = false;
     public bool canMove = true;
@@ -31,10 +34,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public HIRobot selectedRobot;
     public HRobotEE selectedEndEffector;
 
-    private Transform lastValidPosition;
+    private PointerHandler pointerHandler;
 
+    float finalTime = 0.0f;
+    private bool startCounting;
 
-    float deltaTime = 0.0f;
+    private HInteractiveObject Robot;
 
     //private Dictionary<string, float> robotVisibilityBackup = new Dictionary<string, float>();
     public Orientation defaultOrientation = new Orientation(-0.3026389978045349m, 0.9531052601931577m, -0.0000000000000000185312939979m, 0.0000000000000000583608653073m);
@@ -45,6 +50,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         confirmButton.OnClick.AddListener(() => confirmClicked());
         resetButton.OnClick.AddListener(() => resetClicked());
         selectedAxis = Gizmo.Axis.NONE;
+        pointerHandler = gameObject.GetComponent<PointerHandler>();
+        if (pointerHandler == null) {
+            pointerHandler = gameObject.AddComponent<PointerHandler>();
+        }
+
     }
 
     // Update is called once per frame
@@ -53,7 +63,33 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         {
             MoveModel();
         }
-        deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
+        if (startCounting)
+            finalTime += Time.deltaTime;
+
+        // Získání instance ruky
+        IMixedRealityPointer pointer = CoreServices.InputSystem.FocusProvider.PrimaryPointer;
+        if (pointer != null) {
+            // Získání zaměřeného objektu
+            GameObject focusedObject = CoreServices.InputSystem.FocusProvider.GetFocusedObject(pointer);
+            if (focusedObject && focusedObject.transform.parent) {
+                switch (focusedObject.transform.parent.name) {
+                    case "x_axis":
+                        selectedAxis = Gizmo.Axis.X;
+                        break;
+                    case "y_axis":
+                        selectedAxis = Gizmo.Axis.Y;
+                        break;
+                    case "z_axis":
+                        selectedAxis = Gizmo.Axis.Z;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        if (HSelectorManager.Instance.whichExperiment == 1)
+            testingEndPoint.transform.localPosition = gizmoTransform.localPosition - new Vector3(0.0f, 0.01367547f, 0.0f);
+
     }
 
 
@@ -61,12 +97,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         isManipulating = false;
         // set position of the confirmation window
-        Vector3 vec = gizmoTransform.position + new Vector3(0.0f, 0.3f, 0.0f);
+        Vector3 vec = gizmoTransform.position + new Vector3(0.0f, 0.25f, 0.0f);
         confirmationWindow.transform.position = vec;
         confirmationWindow.gameObject.SetActive(true);
 
-        Vector3 selectorVector = gizmoTransform.position + new Vector3(0.12f, 0.3f, 0.4f);
-        HStepSelectorMenu.Instance.stepSelectorMenu.transform.position = selectorVector;
         HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(true);
         
     }
@@ -75,34 +109,21 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         isManipulating = true;
 
-        IMixedRealityPointer pointer = CoreServices.InputSystem.FocusProvider.PrimaryPointer;
-        if (point != null) {
-            GameObject focusedObject = CoreServices.InputSystem.FocusProvider.GetFocusedObject(pointer);
-            switch (focusedObject.transform.parent.name) {
-                case "x_axis":
-                    selectedAxis = Gizmo.Axis.X;
-                    break;
-                case "y_axis":
-                    selectedAxis = Gizmo.Axis.Y;
-                    break;
-                case "z_axis":
-                    selectedAxis = Gizmo.Axis.Z;
-                    break;
-                default:
-                    selectedAxis = Gizmo.Axis.NONE;
-                    break;
-            }
-
-            if (selectedAxis != Gizmo.Axis.NONE)
-                axis = focusedObject.transform.parent.gameObject;
-        }
         HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         confirmationWindow.gameObject.SetActive(false);
     }
 
     public void confirmClicked()
     {
-        MoveRobot();
+        if (HSelectorManager.Instance.whichExperiment == 1) {
+            MoveRobot();
+            startCounting = false;
+            Debug.Log("FINAL TIME: " + finalTime);
+            finalTime = 0.0f;
+            confirmationWindow.SetActive(false);
+            Debug.Log("FINAL DISTANCE: " + Vector3.Distance(testingCube.transform.localPosition, testingEndPoint.transform.localPosition));
+
+        }
     }
 
     public void resetClicked()
@@ -117,9 +138,20 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void activeEndEffectorTranform(HInteractiveObject robot)
     {
+        HStepSelectorMenu.Instance.stepSelectorMenu.transform.position = tmpModel.transform.position + new Vector3(0.0f, 0.2f, 0.2f);
+        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(true);
+        Robot = robot;
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
-        
+        startCounting = true;
+
+        foreach (var collider in robot.transform.GetComponentsInChildren<Collider>()) {
+            collider.enabled = false;
+        }
+
+        foreach (var renderer in robot.GetComponentsInChildren<Renderer>()) {
+            renderer.material = transparentMaterial;
+        }
 
         // set default pose for the previously selected robot
         if (selectedRobot != (RobotActionObjectH) robot && selectedRobot != null)
@@ -186,14 +218,20 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         gizmoTransform.gameObject.SetActive(false);
         confirmationWindow.SetActive(false);
-        Destroy(tmpModel.gameObject);
-        Destroy(gizmo.gameObject);
+        if (tmpModel)
+            Destroy(tmpModel.gameObject);
+        if (gizmo)
+            Destroy(gizmo.gameObject);
         tmpModel = null;
         gizmo = null;
         selectedRobot = null;
         HStepSelectorMenu.Instance.stepSelectorMenu.gameObject.SetActive(false);
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
+
+        foreach (var collider in Robot.transform.GetComponentsInChildren<Collider>()) {
+            collider.enabled = false;
+        }
     }
 
     public async void MoveModel()
@@ -230,11 +268,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             Notifications.Instance.ShowNotification("Unable to move here model", ex.Message);
             return;
         }
-    }
-
-    void OnGUI() {
-        int fps = Mathf.RoundToInt(1.0f / deltaTime);
-        GUI.Label(new Rect(10, 10, 100, 20), "FPS: " + fps);
     }
 
     private async void MoveRobot()
