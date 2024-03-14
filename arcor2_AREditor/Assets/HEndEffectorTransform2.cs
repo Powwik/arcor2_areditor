@@ -14,6 +14,7 @@ using UnityEngine.InputSystem.Utilities;
 
 public class HEndEffectorTransform2 : Singleton<HEndEffectorTransform2>
 {
+    public Transform sceneOrigin;
     public GameObject testingEndPoint;
     public GameObject testingCube;
     public Material transparentMaterial;
@@ -85,7 +86,7 @@ public class HEndEffectorTransform2 : Singleton<HEndEffectorTransform2>
                     HStepSelectorMenu2.Instance.StepSelectorMenu.transform.localPosition = gizmoTransform.localPosition + vecX;
                     break;
                 case Gizmo.Axis.Y:
-                    Vector3 vecY = -0.25f * Vector3.right;
+                    Vector3 vecY = 0.25f * Vector3.right;
                     HStepSelectorMenu2.Instance.StepSelectorMenu.transform.localPosition = gizmoTransform.localPosition + vecY;
                     break;
                 case Gizmo.Axis.Z:
@@ -130,16 +131,15 @@ public class HEndEffectorTransform2 : Singleton<HEndEffectorTransform2>
     public void confirmClicked() {
         if (HSelectorManager.Instance.whichExperiment == 2) {
             MoveRobot();
-            startCounting = false;
             Debug.Log("FINAL TIME: " + finalTime);
-            finalTime = 0.0f;
-            confirmationWindow.SetActive(false);
             Debug.Log("FINAL DISTANCE: " + Vector3.Distance(testingCube.transform.localPosition, testingEndPoint.transform.localPosition));
-
+            startCounting = false;
+            confirmationWindow.SetActive(false);
         }
     }
 
     public void resetClicked() {
+        finalTime = 0.0f;
         confirmationWindow.gameObject.SetActive(false);
         HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         gizmoTransform.position = selectedEndEffector.transform.position;
@@ -152,8 +152,14 @@ public class HEndEffectorTransform2 : Singleton<HEndEffectorTransform2>
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
         startCounting = true;
+        finalTime = 0.0f;
         HStepSelectorMenu2.Instance.StepSelectorMenu.SetActive(true);
         Robot = robot;
+
+        testingCube.transform.SetParent(sceneOrigin);
+        testingCube.gameObject.SetActive(true);
+        testingCube.transform.localPosition = new Vector3(-0.14f, 0.03f, -0.065f);
+        testingCube.transform.eulerAngles = new Vector3(0.0f, 0.0f, 0.0f);
 
         foreach (var collider in robot.transform.GetComponentsInChildren<Collider>()) {
             collider.enabled = false;
@@ -237,8 +243,10 @@ public class HEndEffectorTransform2 : Singleton<HEndEffectorTransform2>
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
 
         foreach (var collider in Robot.transform.GetComponentsInChildren<Collider>()) {
-            collider.enabled = false;
+            collider.enabled = true;
         }
+        startCounting = false;
+        finalTime = 0.0f;
     }
 
     public async void MoveModel() {

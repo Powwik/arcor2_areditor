@@ -56,13 +56,13 @@ public class HStepSelectorMenu : Singleton<HStepSelectorMenu>
 
         switch (HEndEffectorTransform.Instance.selectedAxis) {
             case Gizmo.Axis.X:
-                HEndEffectorTransform.Instance.gizmoTransform.position += new Vector3(0.0f, 0.0f, s * unit);
+                HEndEffectorTransform.Instance.gizmoTransform.localPosition += new Vector3(0.0f, 0.0f, s * unit);
                 break;
             case Gizmo.Axis.Y:
-                HEndEffectorTransform.Instance.gizmoTransform.position += new Vector3(s * unit, 0.0f, 0.0f);
+                HEndEffectorTransform.Instance.gizmoTransform.localPosition += new Vector3(s * unit, 0.0f, 0.0f);
                 break;
             case Gizmo.Axis.Z:
-                HEndEffectorTransform.Instance.gizmoTransform.position += new Vector3(0.0f, s * unit, 0.0f);
+                HEndEffectorTransform.Instance.gizmoTransform.localPosition += new Vector3(0.0f, s * unit, 0.0f);
                 break;
             default:
                 return;

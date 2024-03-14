@@ -21,7 +21,6 @@ public class HEndEffectorTransform3 : Singleton<HEndEffectorTransform3> {
     public Transform sceneOrigin;
     public GameObject testingCube;
     public GameObject testingEndPoint;
-    private List<Material> materials;
 
     public HActionPoint3D point;
     public GameObject gizmoPrefab;
@@ -141,16 +140,15 @@ public class HEndEffectorTransform3 : Singleton<HEndEffectorTransform3> {
     public void confirmClicked() {
         if (HSelectorManager.Instance.whichExperiment == 3) {
             MoveRobot();
-            startCounting = false;
             Debug.Log("FINAL TIME: " + finalTime);
-            finalTime = 0.0f;
             confirmationWindow.SetActive(false);
-
             Debug.Log("FINAL DISTANCE: " + Vector3.Distance(testingCube.transform.localPosition, testingEndPoint.transform.localPosition));
+            startCounting = false;
         }
     }
 
     public void resetClicked() {
+        finalTime = 0.0f;
         confirmationWindow.gameObject.SetActive(false);
         HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         gizmoTransform.position = selectedEndEffector.transform.position;
@@ -165,6 +163,7 @@ public class HEndEffectorTransform3 : Singleton<HEndEffectorTransform3> {
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
         startCounting = true;
+        finalTime = 0.0f;
         Robot = robot;
 
         testingCube.transform.SetParent(sceneOrigin);
@@ -264,6 +263,8 @@ public class HEndEffectorTransform3 : Singleton<HEndEffectorTransform3> {
         foreach (var collider in Robot.transform.GetComponentsInChildren<Collider>()) {
             collider.enabled = true;
         }
+        finalTime = 0.0f;
+        startCounting = false;
     }
 
     public async void MoveModel() {

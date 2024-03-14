@@ -14,6 +14,7 @@ using UnityEngine.InputSystem.Utilities;
 
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
+    public Transform sceneOrigin;
     public GameObject testingEndPoint;
     public GameObject testingCube;
     public Material transparentMaterial;
@@ -119,7 +120,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             MoveRobot();
             startCounting = false;
             Debug.Log("FINAL TIME: " + finalTime);
-            finalTime = 0.0f;
             confirmationWindow.SetActive(false);
             Debug.Log("FINAL DISTANCE: " + Vector3.Distance(testingCube.transform.localPosition, testingEndPoint.transform.localPosition));
 
@@ -128,6 +128,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public void resetClicked()
     {
+        finalTime = 0.0f;
         confirmationWindow.gameObject.SetActive(false);
         HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(false);
         gizmoTransform.position = selectedEndEffector.transform.position;
@@ -138,12 +139,16 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void activeEndEffectorTranform(HInteractiveObject robot)
     {
-        HStepSelectorMenu.Instance.stepSelectorMenu.transform.position = tmpModel.transform.position + new Vector3(0.0f, 0.2f, 0.2f);
-        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(true);
         Robot = robot;
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => updatePosition());
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => manipulation());
         startCounting = true;
+        finalTime = 0.0f;
+
+        testingCube.transform.SetParent(sceneOrigin);
+        testingCube.gameObject.SetActive(true);
+        testingCube.transform.localPosition = new Vector3(-0.14f, 0.03f, -0.065f);
+        testingCube.transform.eulerAngles = new Vector3(0.0f, 0.0f, 0.0f);
 
         foreach (var collider in robot.transform.GetComponentsInChildren<Collider>()) {
             collider.enabled = false;
@@ -209,6 +214,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             }
             await PrepareRobotModel(selectedRobot.GetId(), false);
         }
+        HStepSelectorMenu.Instance.stepSelectorMenu.transform.localPosition = tmpModel.transform.localPosition + new Vector3(-0.4f, 0.25f, 0.3f);
+        HStepSelectorMenu.Instance.stepSelectorMenu.SetActive(true);
+
+
         Vector3 p1 = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(selectedEndEffector.transform.position));
         Position position1 = DataHelper.Vector3ToPosition(p1);
         SetIKToModel(defaultOrientation, position1);
@@ -230,8 +239,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
 
         foreach (var collider in Robot.transform.GetComponentsInChildren<Collider>()) {
-            collider.enabled = false;
+            collider.enabled = true;
         }
+        finalTime = 0.0f;
+        startCounting = false;
     }
 
     public async void MoveModel()
