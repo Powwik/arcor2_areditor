@@ -100,10 +100,10 @@ public class HEndEffectorTransform3 : Singleton<HEndEffectorTransform3> {
         gizmoTransform.GetComponent<BoundsControl>().enabled = false;
 
         slowSphere = Instantiate(point);
+        slowSphere.gameObject.AddComponent<FollowObject>().SetFollowingObject(gizmoTransform.gameObject);
         slowSphere.transform.SetParent(sceneOrigin);
         slowSphere.transform.position = tmpModel.transform.position;
         slowSphere.transform.localScale = Vector3.one / 2;
-        slowSphere.gameObject.AddComponent<FollowObject>().SetFollowingObject(gizmoTransform.gameObject);
 
         slowGizmo = Instantiate(emptyGizmoPrefab);
         slowGizmo.transform.SetParent(slowSphere.transform);

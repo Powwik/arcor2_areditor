@@ -216,7 +216,6 @@ GameObject:
   - component: {fileID: 968243829547990733}
   - component: {fileID: 6948539202081867715}
   - component: {fileID: 5867587032097942129}
-  - component: {fileID: 2267282798404485762}
   m_Layer: 0
   m_Name: emptyGizmo
   m_TagString: Untagged
@@ -278,19 +277,6 @@ ScaleConstraint:
   m_Active: 0
   m_IsLocked: 0
   m_Sources: []
---- !u!114 &2267282798404485762
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 442535900650120311}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c95dc0f1c642e2145b2412f23c917958, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  followingObject: {fileID: 0}
 --- !u!1 &549516329208400703
 GameObject:
   m_ObjectHideFlags: 0
