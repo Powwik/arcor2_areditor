@@ -11,8 +11,6 @@ using System.IO;
 
 public class HSelectorManager : Singleton<HSelectorManager>
 {
-    public int whichExperiment;
-
     public HConfirmDialog confirmDialog;
 
     public HRenameDialog renameDialog;
@@ -217,45 +215,10 @@ public class HSelectorManager : Singleton<HSelectorManager>
     {
         if (SceneManagerH.Instance.SceneStarted)
         {
-            whichExperiment = 1;
-            HEndEffectorTransform.Instance.activeEndEffectorTranform(selectedObject);
+            HEndEffectorTransform.Instance.ActiveEndEffectorTranform(selectedObject);
         }
         else
         {
-            HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
-        }
-    }
-
-    public void moveEndpointClicked2() {
-        if (selectedObject is RobotActionObjectH robot) {
-            moveEndpoint2();
-            setLastClicked(ClickedEnum.MoveEndpoint);
-        } else {
-            HNotificationWindow.Instance.ShowNotification("Please select a robot to proceed.");
-        }
-    }
-    public async void moveEndpoint2() {
-        if (SceneManagerH.Instance.SceneStarted) {
-            whichExperiment = 2;
-            HEndEffectorTransform2.Instance.activeEndEffectorTranform2(selectedObject);
-        } else {
-            HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
-        }
-    }
-
-    public void moveEndpointClicked3() {
-        if (selectedObject is RobotActionObjectH robot) {
-            moveEndpoint3();
-            setLastClicked(ClickedEnum.MoveEndpoint);
-        } else {
-            HNotificationWindow.Instance.ShowNotification("Please select a robot to proceed.");
-        }
-    }
-    public async void moveEndpoint3() {
-        if (SceneManagerH.Instance.SceneStarted) {
-            whichExperiment = 3;
-            HEndEffectorTransform3.Instance.activeEndEffectorTranform3(selectedObject);
-        } else {
             HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
         }
     }

@@ -124,7 +124,12 @@ public class HActionObjectPickerMenu : Singleton<HActionObjectPickerMenu>
 
             // create one button for each object type
         foreach (ActionObjectMetadataH actionObject in ActionsManagerH.Instance.ActionObjectsMetadata.Values.OrderBy(x => x.Type)) {
-                if (actionObject.Abstract || actionObject.CollisionObject)
+
+            // TODO: remove and find a problem with milling machine not loaded model
+            if (actionObject.Type == "MillingMachine")
+                continue;
+
+            if (actionObject.Abstract || actionObject.CollisionObject)
                     continue;
             
                 if (ActionsManagerH.Instance.RobotsMeta.TryGetValue(actionObject.Type, out RobotMeta robotMeta)) {
