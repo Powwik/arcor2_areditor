@@ -203,6 +203,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
     {
         if (selectedObject is RobotActionObjectH robot)
         {
+            // TODO add writeLock for a robot
             moveEndpoint();
             setLastClicked(ClickedEnum.MoveEndpoint);
         }
@@ -219,7 +220,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
         }
         else
         {
-            HNotificationWindow.Instance.ShowNotification("Please eturn on online mode.");
+            HNotificationWindow.Instance.ShowNotification("Please turn on online mode.");
         }
     }
 

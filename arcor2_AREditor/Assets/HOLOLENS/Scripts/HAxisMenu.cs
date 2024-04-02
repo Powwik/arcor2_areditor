@@ -99,8 +99,6 @@ public class HAxisMenu : Singleton<HAxisMenu> {
         Vector3 sliderV = HEndEffectorTransform.Instance.gizmoTransform.localPosition + HSliderMenu.Instance.SliderMenuVectorUp;
         HSliderMenu.Instance.SliderMenu.transform.localPosition = sliderV;
 
-        Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(HEndEffectorTransform.Instance.tmpModel.transform.position));
-        Position position = DataHelper.Vector3ToPosition(point);
-        HEndEffectorTransform.Instance.SetIKToModel(HEndEffectorTransform.Instance.defaultOrientation, position);
+        HEndEffectorTransform.Instance.MoveModel(HEndEffectorTransform.Instance.DefaultOrientation, HEndEffectorTransform.Instance.gizmoTransform, HEndEffectorTransform.MoveOption.Buttons);
     }
 }

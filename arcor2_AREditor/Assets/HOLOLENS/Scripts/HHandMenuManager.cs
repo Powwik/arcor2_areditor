@@ -40,6 +40,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
     public Interactable showProjectsButton;
 
      public Interactable createProject;
+    public Interactable createScene;
 
     public GameObject models;
 
@@ -72,6 +73,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         AllMore,
 
         CreateProject,
+        CreateScene,
         None
     }
 
@@ -127,6 +129,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         listOfNextActions.Add(AllClickedEnum.AllAdd,( () => addButtons.SetActive(true)));
         listOfNextActions.Add(AllClickedEnum.AllMore,( () => moreButtons.SetActive(true)));
         listOfNextActions.Add(AllClickedEnum.CreateProject,( () => CreateProject()));
+        listOfNextActions.Add(AllClickedEnum.CreateScene, (() => CreateScene()));
 
         /**ALL BUTTONS*/
         moveEndpointButton.GetComponent<Interactable>().OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.MoveEndpoint));
@@ -142,6 +145,7 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
         allAddButtons.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.AllAdd));
         allMoreButtons.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.AllMore));
         createProject.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.CreateProject));
+        createScene.OnClick.AddListener(() => onSeletectedChanged(AllClickedEnum.CreateScene));
 
         GameManagerH.Instance.OnGameStateChanged += changeEditorStatus;
     }
@@ -351,6 +355,15 @@ public class HHandMenuManager : Singleton<HHandMenuManager>
             Debug.LogError("Failed to create new project" + ex.Message);
         }
        
+    }
+
+    private async void CreateScene() {
+        string nameOfNewScene = "scene_" + Guid.NewGuid().ToString().Substring(0, 4);
+        try {
+            await WebSocketManagerH.Instance.CreateScene(nameOfNewScene, "");
+        } catch (RequestFailedException e) {
+            Notifications.Instance.ShowNotification("Failed to create new scene", e.Message);
+        }
     }
 
 

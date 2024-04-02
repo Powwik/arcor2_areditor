@@ -1357,6 +1357,17 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
                 throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
         }
 
+    public async Task CreateScene(string name, string description) {
+        int r_id = Interlocked.Increment(ref requestID);
+        IO.Swagger.Model.NewSceneRequestArgs args = new IO.Swagger.Model.NewSceneRequestArgs(name: name, description: description);
+        IO.Swagger.Model.NewSceneRequest request = new IO.Swagger.Model.NewSceneRequest(r_id, "NewScene", args);
+        SendDataToServer(request.ToJson(), r_id, true);
+        IO.Swagger.Model.NewSceneResponse response = await WaitForResult<IO.Swagger.Model.NewSceneResponse>(r_id);
+
+        if (response == null || !response.Result)
+            throw new RequestFailedException(response == null ? "Request timed out" : response.Messages[0]);
+    }
+
     public async Task<List<IO.Swagger.Model.Joint>> InverseKinematics(string robotId, string endEffectorId, bool avoidCollisions, IO.Swagger.Model.Pose pose, List<IO.Swagger.Model.Joint> startJoints) {
         int r_id = Interlocked.Increment(ref requestID);
         

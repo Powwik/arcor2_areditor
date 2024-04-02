@@ -9,14 +9,14 @@ public class HNotificationWindow : Singleton<HNotificationWindow>
     public TextMeshPro notificationText;
 
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        notificationWindow.gameObject.SetActive(false);
+        notificationWindow.SetActive(false);
     }
 
     public void ShowNotification(string text)
     {
-        notificationWindow.gameObject.SetActive(true);
+        notificationWindow.SetActive(true);
         notificationText.text = text;
         StartCoroutine(HideNotification());
     }
@@ -24,6 +24,6 @@ public class HNotificationWindow : Singleton<HNotificationWindow>
     private IEnumerator HideNotification()
     {
         yield return new WaitForSeconds(2f);
-        notificationWindow.gameObject.SetActive(false);
+        notificationWindow.SetActive(false);
     }
 }
