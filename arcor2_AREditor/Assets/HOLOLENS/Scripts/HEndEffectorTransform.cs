@@ -10,7 +10,6 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.UI.BoundsControl;
 using Microsoft.MixedReality.Toolkit.Utilities;
-using RosSharp.Urdf;
 using UnityEngine;
 using UnityEngine.Animations;
 
@@ -59,7 +58,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     }
 
     // Update is called once per frame
-    private async void Update()
+    private void Update()
     {
         if (isManipulating)
         {
@@ -67,7 +66,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
             if (Vector3.Distance(currentPosition, previousPosition) > 0.00001f)
             {
-                await MoveModel(DefaultOrientation, slowGizmo.transform, MoveOption.DirectManipulation);
+                MoveModel(DefaultOrientation, slowGizmo.transform, MoveOption.DirectManipulation);
             }
             previousPosition = currentPosition;
         }
@@ -180,7 +179,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             collider.enabled = false;
         }
 
-        ChangeMaterialOfRobot(Robot, TransparentMaterial);
+        foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
+        {
+            materialsBackup.Add(renderer.transform.name, renderer.material);
+            renderer.material = TransparentMaterial;
+        }
 
         // set default pose for the previously selected robot
         if (selectedRobot != (RobotActionObjectH) robot && selectedRobot != null)
@@ -239,6 +242,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             await PrepareRobotModel(selectedRobot.GetId(), false);
         }
         MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
+        RemoveVisualsFromActionObjects();
     }
 
     public void DeactiveEndEffectorTransform()
@@ -276,9 +280,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             renderer.material = materialsBackup[renderer.transform.name];
         }
         materialsBackup.Clear();
+        SetVisualsToActionObjects();
     }
 
-    public async Task MoveModel(Orientation or, Transform t, MoveOption moveOption)
+    public async void MoveModel(Orientation or, Transform t, MoveOption moveOption)
     {
         Vector3 transformPosition = t.position;
         Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(transformPosition));
@@ -348,14 +353,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    private void ChangeMaterialOfRobot(HInteractiveObject robot, Material material)
-    {
-        foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
-        {
-            renderer.material = material;
-        }
-    }
-
     private void SetErrorMaterial(HInteractiveObject robot, Material material)
     {
         foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
@@ -374,13 +371,73 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    private void RemoveColliderFromActionObjects()
+    private void RemoveVisualsFromActionObjects()
     {
+        Transform start = SceneOrigin.Find("START");
+        Transform end = SceneOrigin.Find("END");
+        Transform actionPoints = SceneOrigin.Find("ActionPoints");
 
+        if (start) {
+            foreach (Collider collider in start.GetComponentsInChildren<Collider>()) {
+                collider.enabled = false;
+            }
+            foreach (Transform t in start.GetComponentsInChildren<Transform>()) {
+                if (t.name == "Cube")
+                    t.GetComponent<MeshRenderer>().enabled = false;
+            }
+        }
+        if (end) {
+            foreach (Collider collider in end.GetComponentsInChildren<Collider>()) {
+                collider.enabled = false;
+            }
+            foreach (Transform t in end.GetComponentsInChildren<Transform>()) {
+                if (t.name == "Cube")
+                    t.GetComponent<MeshRenderer>().enabled = false;
+            }
+        }
+        if (actionPoints) {
+            foreach (Collider collider in actionPoints.GetComponentsInChildren<Collider>()) {
+                collider.enabled = false;
+            }
+            foreach (Transform t in actionPoints.GetComponentsInChildren<Transform>()) {
+                if (t.name == "Cube")
+                    t.GetComponent<MeshRenderer>().enabled = false;
+            }
+        }
     }
 
-    private void SetColliderFromActionObjects()
+    private void SetVisualsToActionObjects()
     {
+        Transform start = SceneOrigin.Find("START");
+        Transform end = SceneOrigin.Find("END");
+        Transform actionPoints = SceneOrigin.Find("ActionPoints");
 
+        if (start) {
+            foreach (Collider collider in start.GetComponentsInChildren<Collider>()) {
+                collider.enabled = true;
+            }
+            foreach (Transform t in start.GetComponentsInChildren<Transform>()) {
+                if (t.name == "Cube")
+                    t.GetComponent<MeshRenderer>().enabled = true;
+            }
+        }
+        if (end) {
+            foreach (Collider collider in end.GetComponentsInChildren<Collider>()) {
+                collider.enabled = true;
+            }
+            foreach (Transform t in end.GetComponentsInChildren<Transform>()) {
+                if (t.name == "Cube")
+                    t.GetComponent<MeshRenderer>().enabled = true;
+            }
+        }
+        if (actionPoints) {
+            foreach (Collider collider in actionPoints.GetComponentsInChildren<Collider>()) {
+                collider.enabled = true;
+            }
+            foreach (Transform t in actionPoints.GetComponentsInChildren<Transform>()) {
+                if (t.name == "Cube")
+                    t.GetComponent<MeshRenderer>().enabled = true;
+            }
+        }
     }
 }
