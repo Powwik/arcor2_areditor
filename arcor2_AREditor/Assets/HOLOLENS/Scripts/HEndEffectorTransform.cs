@@ -10,6 +10,7 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.UI.BoundsControl;
 using Microsoft.MixedReality.Toolkit.Utilities;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Animations;
 
@@ -202,6 +203,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             List<HRobotEE> ee = await selectedRobot.GetAllEE();
             selectedEndEffector = ee[0];
 
+
             // create new action point for manipulation
             tmpModel = Instantiate(PointPrefab, selectedEndEffector.transform.position, selectedEndEffector.transform.rotation);
 
@@ -220,7 +222,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             gizmo.transform.SetParent(tmpModel.transform);
             gizmo.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
-            gizmo.transform.localPosition = Vector3.zero;
+            gizmo.transform.localPosition = Vector3.zero + new Vector3(0.0f, 0.02f, 0.0f);
             gizmo.transform.eulerAngles = tmpModel.transform.eulerAngles;
             gizmo.SetXDelta(0);
             gizmo.SetYDelta(0);
@@ -243,6 +245,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
         MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
         RemoveVisualsFromActionObjects();
+        ShowRangeVisual(robot);
     }
 
     public void DeactiveEndEffectorTransform()
@@ -364,7 +367,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     private IEnumerator HideErrorMaterial(HInteractiveObject robot, Material material)
     {
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.5f);
         foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
         {
             renderer.material = material;
@@ -439,5 +442,100 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                     t.GetComponent<MeshRenderer>().enabled = true;
             }
         }
+    }
+
+    private async void ShowRangeVisual(HInteractiveObject robot)
+    {
+        float radius = 0.0f;
+        int segments = 45;
+        int angleStep = 360 / segments;
+        float step = 0.05f;
+
+        Material m = AssetDatabase.LoadAssetAtPath<Material>("Assets/HOLOLENS/Materials/BlueMaterial.mat");
+
+        GameObject newObject = new GameObject("LineRenderer");
+
+        LineRenderer lineRenderer = newObject.AddComponent<LineRenderer>();
+        lineRenderer.loop = true;
+        lineRenderer.startWidth = 0.01f;
+        lineRenderer.numCornerVertices = 10;
+        lineRenderer.material = m;
+        lineRenderer.positionCount = segments;
+        lineRenderer.transform.SetParent(robot.transform);
+        lineRenderer.transform.position = new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z);
+
+
+        for (int i = 0; i < segments; i++) {
+            float angle = Mathf.Deg2Rad * i * angleStep;
+            bool isInvalid = false;
+            float currentStep = step;
+            Vector3 lastPostition = new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z);
+
+            while (currentStep < 0.8f) {
+                float x = Mathf.Sin(angle) * (radius + currentStep);
+                float z = Mathf.Cos(angle) * (radius + currentStep);
+                Vector3 currentPosition = new Vector3(robot.transform.position.x + x, SceneOrigin.position.y, robot.transform.position.z + z);
+
+                try {
+                    Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPosition));
+                    Position position = DataHelper.Vector3ToPosition(point);
+                    IO.Swagger.Model.Pose pose = new(orientation: DefaultOrientation, position: position);
+                    List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
+                    SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(selectedRobot.GetId());
+                    List<IO.Swagger.Model.Joint> modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
+                        selectedRobot.GetId(),
+                        selectedEndEffector.GetName(),
+                        true,
+                        pose,
+                        startJoints);
+
+                    lastPostition = currentPosition;
+
+                } catch (RequestFailedException) {
+                    isInvalid = true;
+                    lineRenderer.SetPosition(i, lastPostition);
+
+                }
+                currentStep += step;
+            }
+        }
+        Vector3[] test = new Vector3[lineRenderer.positionCount];
+        lineRenderer.GetPositions(test);
+        List<Vector3> linePoints = test.ToList();
+        linePoints.Insert(0, new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z));
+
+        // Mesh
+        UnityEngine.Mesh mesh = new UnityEngine.Mesh();
+        Vector3[] vertices = linePoints.ToArray();
+        int[] triangles = CreateTriangles(vertices);
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+
+        // Plane Object
+        GameObject planeObject = new GameObject("PlaneObject");
+        MeshFilter meshFilter = planeObject.AddComponent<MeshFilter>();
+        meshFilter.mesh = mesh;
+        //MeshCollider meshCollider = planeObject.AddComponent<MeshCollider>();
+        //meshCollider.sharedMesh = mesh;
+
+        planeObject.AddComponent<MeshRenderer>().material = TransparentMaterial;
+    }
+    private int[] CreateTriangles(Vector3[] positions)
+    {
+        int[] triangles = new int[(positions.Length - 2) * 3 + 3]; // +3 for last triangle
+
+        for (int i = 0; i < positions.Length - 2; i++)
+        {
+            triangles[i * 3] = 0; // center
+            triangles[i * 3 + 1] = i + 1;
+            triangles[i * 3 + 2] = i + 2;
+        }
+
+        // last triangle
+        triangles[(positions.Length - 2) * 3] = 0; // center
+        triangles[(positions.Length - 2) * 3 + 1] = positions.Length - 1;
+        triangles[(positions.Length - 2) * 3 + 2] = 1;
+
+        return triangles;
     }
 }
