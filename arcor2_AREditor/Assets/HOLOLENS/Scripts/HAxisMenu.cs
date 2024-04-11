@@ -7,6 +7,7 @@ using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.Utilities;
 using UnityEngine;
+using LibTessDotNet;
 
 public class HAxisMenu : Singleton<HAxisMenu> {
 
@@ -82,12 +83,18 @@ public class HAxisMenu : Singleton<HAxisMenu> {
         {
             case Gizmo.Axis.X:
                 HEndEffectorTransform.Instance.gizmoTransform.localPosition += new Vector3(0.0f, 0.0f, s);
+                float deltaX = HEndEffectorTransform.Instance.gizmo.gameObject.GetComponent<HGizmo>().GetXDelta();
+                HEndEffectorTransform.Instance.gizmo.gameObject.GetComponent<HGizmo>().SetXDelta(deltaX + s);
                 break;
             case Gizmo.Axis.Y:
                 HEndEffectorTransform.Instance.gizmoTransform.localPosition += new Vector3(s, 0.0f, 0.0f);
+                float deltaY = HEndEffectorTransform.Instance.gizmo.gameObject.GetComponent<HGizmo>().GetYDelta();
+                HEndEffectorTransform.Instance.gizmo.gameObject.GetComponent<HGizmo>().SetYDelta(deltaY + s);
                 break;
             case Gizmo.Axis.Z:
                 HEndEffectorTransform.Instance.gizmoTransform.localPosition += new Vector3(0.0f, s, 0.0f);
+                float deltaZ = HEndEffectorTransform.Instance.gizmo.gameObject.GetComponent<HGizmo>().GetZDelta();
+                HEndEffectorTransform.Instance.gizmo.gameObject.GetComponent<HGizmo>().SetZDelta(deltaZ + s);
                 break;
             default:
                 return;

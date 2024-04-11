@@ -12545,7 +12545,6 @@ MonoBehaviour:
   selectedEndEffector: {fileID: 0}
   TransparentMaterial: {fileID: 2100000, guid: 101f396bd86be414182fd0ad56037061, type: 2}
   RedMaterial: {fileID: 2100000, guid: 4655444c128714a46bd5c6a0f11efc42, type: 2}
-  LineRenderer: {fileID: 996560033}
 --- !u!1 &723939180
 GameObject:
   m_ObjectHideFlags: 0
