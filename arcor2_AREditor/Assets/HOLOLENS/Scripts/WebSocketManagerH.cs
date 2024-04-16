@@ -860,7 +860,6 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
         int r_id = Interlocked.Increment(ref requestID);
         IO.Swagger.Model.IdArgs args = new IO.Swagger.Model.IdArgs(id: id);
         IO.Swagger.Model.OpenProjectRequest request = new IO.Swagger.Model.OpenProjectRequest(id: r_id, request: "OpenProject", args);
-        Debug.Log("PROJEEECT: " + request.ToJson());
         SendDataToServer(request.ToJson(), r_id, true);
         IO.Swagger.Model.OpenProjectResponse response = await WaitForResult<IO.Swagger.Model.OpenProjectResponse>(r_id, 30000);
         if (response == null || !response.Result)
@@ -1412,7 +1411,10 @@ public class WebSocketManagerH : Singleton<WebSocketManagerH>
         RobotMoveToPose robotMoveToPoseEvent = JsonConvert.DeserializeObject<IO.Swagger.Model.RobotMoveToPose>(data);
         OnRobotMoveToPoseEvent?.Invoke(this, new RobotMoveToPoseEventArgs(robotMoveToPoseEvent));
         if (robotMoveToPoseEvent.Data.MoveEventType == RobotMoveToPoseData.MoveEventTypeEnum.Failed)
+        {
+            HNotificationWindow.Instance.ShowNotification("Unable to move robot here.");
             Notifications.Instance.ShowNotification("Robot failed to move", robotMoveToPoseEvent.Data.Message);
+        }
     }
 
     public async Task MoveToPose(string robotId, string endEffectorName, decimal speed, Position position, Orientation orientation, string armId = null) {

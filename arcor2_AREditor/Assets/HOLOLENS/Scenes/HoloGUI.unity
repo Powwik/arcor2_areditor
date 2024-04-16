@@ -12539,6 +12539,7 @@ MonoBehaviour:
   EmptyGizmoPrefab: {fileID: 442535900650120311, guid: 4b7e5ac6bb24e1141bc2f420e415a7d4,
     type: 3}
   gizmoTransform: {fileID: 993244254}
+  gizmo: {fileID: 0}
   slowSphere: {fileID: 3217185836269592109, guid: 75b7a989b11be614ba6008d34d8fb7c8,
     type: 3}
   selectedAxis: 0
@@ -16431,7 +16432,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 838138905}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.13559926}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.099999994, y: 0.099999994, z: 0.19999999}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16439,7 +16440,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.017140329, y: -0.04984331}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 13.6954, y: 2.1653}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &838138907
@@ -16490,19 +16491,19 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 13
-  m_fontSizeBase: 13
+  m_fontSize: 8
+  m_fontSizeBase: 8
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 512
+  m_VerticalAlignment: 2048
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
-  m_lineSpacing: -20
+  m_lineSpacing: 0
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
@@ -16526,7 +16527,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 1
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -1.1339035, y: -6.7041183, z: -5.5093436, w: 0.5097212}
+  m_margin: {x: -1.1339035, y: 0.049702283, z: -5.5093436, w: 0.5097212}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   _SortingLayer: 0
@@ -20761,8 +20762,8 @@ MonoBehaviour:
   aspectV: 1
   ignoreAngleClamp: 0
   ignoreDistanceClamp: 0
-  useFixedVerticalPosition: 1
-  fixedVerticalPosition: -0.1
+  useFixedVerticalPosition: 0
+  fixedVerticalPosition: 0
   orientToReferenceDirection: 0
 --- !u!114 &1031954900
 MonoBehaviour:

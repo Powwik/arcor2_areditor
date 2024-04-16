@@ -1,6 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Base;
 using Hololens;
@@ -10,8 +13,11 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.UI.BoundsControl;
 using Microsoft.MixedReality.Toolkit.Utilities;
+using Newtonsoft.Json;
+using TriLibCore.General;
 using UnityEngine;
 using UnityEngine.Animations;
+using UnityEngine.UIElements;
 
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
@@ -37,6 +43,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public Material RedMaterial;
 
     private HInteractiveObject Robot;
+
+    private LineRenderer lineRenderer;
 
     private Vector3 lastValidPosition;
     private Vector3 previousPosition;
@@ -72,7 +80,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             previousPosition = currentPosition;
 
             Vector3 vec = slowGizmo.transform.position - startPosition;
-            //float slowDeltaX = gizmo.gameObject.GetComponent<HGizmo>().GetXDelta();
             slowGizmo.gameObject.GetComponent<HGizmo>().SetXDelta(TransformConvertor.UnityToROS(vec).x);
             slowGizmo.gameObject.GetComponent<HGizmo>().SetYDelta(TransformConvertor.UnityToROS(vec).y);
             slowGizmo.gameObject.GetComponent<HGizmo>().SetZDelta(TransformConvertor.UnityToROS(vec).z);
@@ -182,25 +189,28 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     }
 
     public async void ActiveEndEffectorTranform(HInteractiveObject robot)
-    {    
+    {
+        // set materials for the previously selected robot
+        if (materialsBackup.Count > 0)
+        {
+            foreach (Renderer renderer in Robot.GetComponentsInChildren<Renderer>())
+            {
+                renderer.material = materialsBackup[renderer.transform.name];
+            }
+            materialsBackup.Clear();
+        }
+        // enable colliders for the previously selected robot
+        if (Robot)
+        {
+            foreach (Collider collider in Robot.transform.GetComponentsInChildren<Collider>())
+            {
+                collider.enabled = true;
+            }
+        }
+
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => UpdatePosition());
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => Manipulation());
         Robot = robot;
-        //RobotRangeStorage.Instance.LoadRangesToStorageAsync();
-
-        HSliderMenu.Instance.SliderMenu.SetActive(true);
-        HAxisMenu.Instance.AxisMenu.SetActive(true);
-
-        foreach (Collider collider in robot.transform.GetComponentsInChildren<Collider>())
-        {
-            collider.enabled = false;
-        }
-
-        foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
-        {
-            materialsBackup.Add(renderer.transform.name, renderer.material);
-            renderer.material = TransparentMaterial;
-        }
 
         // set default pose for the previously selected robot
         if (selectedRobot != (RobotActionObjectH) robot && selectedRobot != null)
@@ -260,8 +270,27 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             await PrepareRobotModel(selectedRobot.GetId(), false);
         }
         MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
+
+        Vector3 sliderVector = gizmoTransform.localPosition + HSliderMenu.Instance.SliderMenuVectorUp;
+        HSliderMenu.Instance.SliderMenu.transform.localPosition = sliderVector;
+        HSliderMenu.Instance.SliderMenu.SetActive(true);
+        HAxisMenu.Instance.AxisMenu.SetActive(true);
+        HConfirmationWindow.Instance.ConfirmationWindow.SetActive(false);
+
+        // disable robot colliders
+        foreach (Collider collider in robot.transform.GetComponentsInChildren<Collider>()) {
+            collider.enabled = false;
+        }
+
+        // save robot materials
+        foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>()) {
+            materialsBackup.Add(renderer.transform.name, renderer.material);
+            renderer.material = TransparentMaterial;
+        }
+
         RemoveVisualsFromActionObjects();
-        //ShowRangeVisual(robot);
+        //await GetRangeVisual(robot);
+        ShowRangeVisual(robot);
     }
 
     public void DeactiveEndEffectorTransform()
@@ -282,6 +311,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         tmpModel = null;
         gizmo = null;
         selectedRobot = null;
+        Robot = null;
 
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
@@ -306,7 +336,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         Vector3 transformPosition = t.position;
         Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(transformPosition));
-        Position position = DataHelper.Vector3ToPosition(point);
+        IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
+
         try {
             IO.Swagger.Model.Pose pose = new(orientation: or, position: position);
             List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
@@ -351,14 +382,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 armId = SceneManagerH.Instance.SelectedArmId;
 
             Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(tmpModel.transform.position));
-            Position position = DataHelper.Vector3ToPosition(point);
+            IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
 
             await WebSocketManagerH.Instance.MoveToPose(selectedRobot.GetId(), selectedEndEffector.GetName(), 0.5m, position, DefaultOrientation);
 
-        } catch (ItemNotFoundException ex) {
-            Notifications.Instance.ShowNotification("Failed to move robot", ex.Message);
-        } catch (RequestFailedException ex) {
-            //Notifications.Instance.ShowNotification("Failed to move robot", ex.Message);
+        } catch {
             HNotificationWindow.Instance.ShowNotification("Unable to move robot here.");
         }
     }
@@ -460,23 +488,19 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
-    private async void ShowRangeVisual(HInteractiveObject robot)
+    public async Task GetRangeVisual(HInteractiveObject robot)
     {
         float radius = 0.0f;
         int segments = 45;
         int angleStep = 360 / segments;
         float step = 0.05f;
 
-        GameObject newObject = new GameObject("LineRenderer");
-        LineRenderer lineRenderer = newObject.AddComponent<LineRenderer>();
-        lineRenderer.loop = true;
-        lineRenderer.startWidth = 0.01f;
-        lineRenderer.numCornerVertices = 10;
-        lineRenderer.material = RedMaterial;
-        lineRenderer.positionCount = segments;
-        lineRenderer.transform.SetParent(robot.transform);
-        lineRenderer.transform.position = new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z);
+        HIRobot HIRobot = (RobotActionObjectH) robot;
 
+        //List<HRobotEE> ee = await HIRobot.GetAllEE();
+        //HRobotEE effector = ee[0];
+
+        OrderedDictionary<int, float> degreesValues = new OrderedDictionary<int, float>();
 
         for (int i = 0; i < segments; i++)
         {
@@ -494,13 +518,13 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 
                 try {
                     Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPosition));
-                    Position position = DataHelper.Vector3ToPosition(point);
+                    IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
                     IO.Swagger.Model.Pose pose = new(orientation: DefaultOrientation, position: position);
-                    List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
-                    SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(selectedRobot.GetId());
+                    List<IO.Swagger.Model.Joint> startJoints = new();
+                    SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(HIRobot.GetId());
                     List<IO.Swagger.Model.Joint> modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
-                        selectedRobot.GetId(),
-                        selectedEndEffector.GetName(),
+                        robot.GetId(),
+                        "default",
                         true,
                         pose,
                         startJoints);
@@ -514,20 +538,19 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                     Vector3 finalPosition = lastPostition;
                     while (startStep < currentStep)
                     {
-                        startStep += 0.05f;
                         float x1 = Mathf.Sin(angle) * (radius + startStep);
                         float z1 = Mathf.Cos(angle) * (radius + startStep);
                         Vector3 currentPosition1 = new Vector3(robot.transform.position.x + x1, SceneOrigin.position.y, robot.transform.position.z + z1);
 
                         try {
                             Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPosition1));
-                            Position position = DataHelper.Vector3ToPosition(point);
+                            IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
                             IO.Swagger.Model.Pose pose = new(orientation: DefaultOrientation, position: position);
-                            List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
-                            SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(selectedRobot.GetId());
+                            List<IO.Swagger.Model.Joint> startJoints = new();
+                            SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(HIRobot.GetId());
                             List<IO.Swagger.Model.Joint> modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
-                                selectedRobot.GetId(),
-                                selectedEndEffector.GetName(),
+                                HIRobot.GetId(),
+                                "default",
                                 true,
                                 pose,
                                 startJoints);
@@ -536,19 +559,54 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                         }
                         catch (RequestFailedException)
                         {
-                            lineRenderer.SetPosition(i, finalPosition);
+                            degreesValues.Add(i * angleStep, Vector3.Distance(new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z), finalPosition));
                             isValid = false;
                             break;
                         }
+                        startStep += 0.01f;
                     }
                 }
                 currentStep += step;
             }
         }
-        Vector3[] test = new Vector3[lineRenderer.positionCount];
-        lineRenderer.GetPositions(test);
-        List<Vector3> linePoints = test.ToList();
+        RobotRangeStorage.Instance.InsertRobotRanges(robot.name, degreesValues);
+    }
+
+    private void ShowRangeVisual(HInteractiveObject robot)
+    {
+        if (!RobotRangeStorage.Instance.RobotsRange.ContainsKey(robot.name)) {
+            return;
+        }
+        OrderedDictionary<int, float> valuesDictionary = RobotRangeStorage.Instance.RobotsRange[robot.name];
+
+        GameObject newObject = new GameObject("LineRenderer");
+        lineRenderer = newObject.AddComponent<LineRenderer>();
+        lineRenderer.loop = true;
+        lineRenderer.startWidth = 0.01f;
+        lineRenderer.numCornerVertices = 10;
+        lineRenderer.material = RedMaterial;
+        lineRenderer.positionCount = valuesDictionary.Count;
+        //lineRenderer.transform.SetParent(robot.transform);
+        lineRenderer.transform.position = new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z);
+
+        int linerendererPosition = 0;
+        foreach (KeyValuePair<int, float> pair in valuesDictionary)
+        {
+            float angle = Mathf.Deg2Rad * pair.Key;
+            float x = Mathf.Sin(angle) * pair.Value;
+            float z = Mathf.Cos(angle) * pair.Value;
+            Vector3 position = new Vector3(robot.transform.position.x + x, SceneOrigin.position.y, robot.transform.position.z + z);
+
+            lineRenderer.SetPosition(linerendererPosition, position);
+            linerendererPosition++;
+        }
+
+
+        Vector3[] vectors = new Vector3[lineRenderer.positionCount];
+        lineRenderer.GetPositions(vectors);
+        List<Vector3> linePoints = vectors.ToList();
         linePoints.Insert(0, new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z));
+
 
         // Mesh
         UnityEngine.Mesh mesh = new UnityEngine.Mesh();
@@ -561,9 +619,9 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         GameObject planeObject = new GameObject("PlaneObject");
         MeshFilter meshFilter = planeObject.AddComponent<MeshFilter>();
         meshFilter.mesh = mesh;
-
         planeObject.AddComponent<MeshRenderer>().material = TransparentMaterial;
     }
+
     private int[] CreateTriangles(Vector3[] positions)
     {
         int[] triangles = new int[(positions.Length - 2) * 3 + 3]; // +3 for last triangle

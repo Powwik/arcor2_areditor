@@ -199,7 +199,7 @@ public class HSelectorManager : Singleton<HSelectorManager>
     }
 
 
-    public void moveEndpointClicked()
+    public async void moveEndpointClicked()
     {
         if (selectedObject is RobotActionObjectH robot)
         {

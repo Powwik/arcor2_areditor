@@ -741,12 +741,15 @@ public class GameManagerH : Singleton<GameManagerH>
         
     }
 
+    public List<ActionObjectH> Robots = new();
+
     /// <summary>
     /// Create visual elements of opened scene and project and open project editor
     /// </summary>
     /// <param name="project">Project desription from the server</param>
     /// <returns></returns>
-    internal async void ProjectOpened(Scene scene, Project project) {
+    internal async void ProjectOpened(Scene scene, Project project)
+    {
         var state = GetGameState();
         if (!ActionsManagerH.Instance.ActionsReady || !HActionObjectPickerMenu.Instance.Loaded) {
             newProject = project;
@@ -760,7 +763,9 @@ public class GameManagerH : Singleton<GameManagerH>
         }
     //    SetGameState(GameStateEnum.LoadingProject);
         try {
-         
+            SceneManagerH.Instance.SceneOrigin.SetActive(false);
+            ShowLoadingScreen();
+            SceneManagerH.Instance.SceneStarted = true;
            // ListScenes.Instance.createMenuScene(scene,project);
             if (!await SceneManagerH.Instance.CreateScene(scene, true)) {
                 HNotificationManager.Instance.ShowNotification("Failed to initialize scene Project CreateScene");
@@ -768,6 +773,15 @@ public class GameManagerH : Singleton<GameManagerH>
              //   HideLoadingScreen();
                 return;
             }
+            foreach (ActionObjectH actionObject in Robots)
+            {
+                //if (!RobotRangeStorage.Instance.RobotsRange.ContainsKey(actionObject.name))
+                //{
+                    //await HEndEffectorTransform.Instance.GetRangeVisual(actionObject);
+                //}
+            }
+            SceneManagerH.Instance.SceneOrigin.SetActive(true);
+            HideLoadingScreen();
             if (await HProjectManager.Instance.CreateProject(project, true)) {
                 OpenProjectEditor();
             } else {

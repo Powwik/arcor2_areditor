@@ -432,6 +432,7 @@ public class SceneManagerH :  Singleton<SceneManagerH>
                 ActionObjectH actionObject = SpawnActionObject(aoSwagger, customCollisionModels);
                 actionObject.ActionObjectUpdate(aoSwagger);
                 currentAO.Add(aoSwagger.Id);
+                GameManagerH.Instance.Robots.Add(actionObject);
             }
         }
         catch (Exception e) {
