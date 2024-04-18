@@ -7,6 +7,7 @@ using Base;
 using IO.Swagger.Model;
 using Newtonsoft.Json;
 using System.Linq;
+using System.Threading.Tasks;
 
 
 
@@ -93,7 +94,7 @@ public class HEditorMenuScreen : Singleton<HEditorMenuScreen>
             StartScene();
     }
 
-    public async void StartScene() {
+    public async Task StartScene() {
         try {
             await WebSocketManagerH.Instance.StartScene(false);
         } catch (RequestFailedException e) {

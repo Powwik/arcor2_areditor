@@ -45,6 +45,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     private HInteractiveObject Robot;
 
     private LineRenderer lineRenderer;
+    private GameObject planeObject;
 
     private Vector3 lastValidPosition;
     private Vector3 previousPosition;
@@ -64,6 +65,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     private void Start()
     {
         selectedAxis = Gizmo.Axis.X;
+        gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => UpdatePosition());
+        gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => Manipulation());
     }
 
     // Update is called once per frame
@@ -118,12 +121,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     {
         isManipulating = false;
         gizmoTransform.GetComponent<BoundsControl>().enabled = true;
-
         gizmoTransform.position = lastValidPosition;
 
         Vector3 vec = gizmoTransform.localPosition + HConfirmationWindow.Instance.ConfirmationMenuVectorUp;
         HConfirmationWindow.Instance.ConfirmationWindow.transform.localPosition = vec;
-        HConfirmationWindow.Instance.ConfirmationWindow.gameObject.SetActive(true);
+        HConfirmationWindow.Instance.ConfirmationWindow.SetActive(true);
 
         Vector3 sliderVector = gizmoTransform.localPosition + HSliderMenu.Instance.SliderMenuVectorUp;
         HSliderMenu.Instance.SliderMenu.transform.localPosition = sliderVector;
@@ -142,9 +144,9 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public void Manipulation()
     {
         isManipulating = true;
-
+        
         gizmoTransform.GetComponent<BoundsControl>().enabled = false;
-
+        
         slowSphere = Instantiate(PointPrefab);
         slowSphere.gameObject.AddComponent<HFollowObject>().SetFollowingObject(gizmoTransform.gameObject);
         slowSphere.transform.SetParent(SceneOrigin);
@@ -155,13 +157,11 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         slowGizmo.transform.SetParent(slowSphere.transform);
         slowGizmo.transform.rotation = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
         slowGizmo.transform.position = gizmoTransform.position;
-
-        //slowGizmo.transform.localPosition = Vector3.zero + new Vector3(0.0f, 0.02f, 0.0f);
         slowGizmo.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
         HSliderMenu.Instance.SliderMenu.SetActive(false);
         HAxisMenu.Instance.AxisMenu.SetActive(false);
-        HConfirmationWindow.Instance.ConfirmationWindow.gameObject.SetActive(false);
+        HConfirmationWindow.Instance.ConfirmationWindow.SetActive(false);
 
         foreach (Renderer render in tmpModel.transform.GetComponentsInChildren<Renderer>())
         {
@@ -172,7 +172,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     public void ConfirmClicked()
     {
         MoveRobot();
-        startPosition = gizmo.transform.position;
+        startPosition = gizmoTransform.position;
         gizmo.gameObject.GetComponent<HGizmo>().SetXDelta(0);
         gizmo.gameObject.GetComponent<HGizmo>().SetYDelta(0);
         gizmo.gameObject.GetComponent<HGizmo>().SetZDelta(0);
@@ -190,26 +190,17 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async void ActiveEndEffectorTranform(HInteractiveObject robot)
     {
-        // set materials for the previously selected robot
-        if (materialsBackup.Count > 0)
-        {
-            foreach (Renderer renderer in Robot.GetComponentsInChildren<Renderer>())
-            {
-                renderer.material = materialsBackup[renderer.transform.name];
-            }
-            materialsBackup.Clear();
-        }
-        // enable colliders for the previously selected robot
-        if (Robot)
-        {
-            foreach (Collider collider in Robot.transform.GetComponentsInChildren<Collider>())
-            {
-                collider.enabled = true;
-            }
-        }
+        gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
+        gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
 
-        gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => UpdatePosition());
-        gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => Manipulation());
+        RobotActionObjectH r = (RobotActionObjectH) robot;
+        if (!GameManagerH.Instance.RobotsWithInverseKinematics.Contains(r.Data.Type))
+        {
+            HNotificationWindow.Instance.ShowNotification("Robot does not support IK");
+            return;
+        }
+        ResetVisuals();
+
         Robot = robot;
 
         // set default pose for the previously selected robot
@@ -220,10 +211,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
         if (selectedRobot != (RobotActionObjectH) robot)
         {
-            if (gizmo)
-                Destroy(gizmo.gameObject);
-            if (tmpModel)
+            gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => UpdatePosition());
+            gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => Manipulation());
+            
+            if (tmpModel) {
                 Destroy(tmpModel.gameObject);
+            }
 
             selectedRobot = (RobotActionObjectH) robot;
             List<HRobotEE> ee = await selectedRobot.GetAllEE();
@@ -289,7 +282,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
 
         RemoveVisualsFromActionObjects();
-        //await GetRangeVisual(robot);
         ShowRangeVisual(robot);
     }
 
@@ -307,6 +299,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         if (slowSphere)
             Destroy(slowSphere.gameObject);
 
+        ResetVisuals();
+
         slowSphere = null;
         tmpModel = null;
         gizmo = null;
@@ -319,16 +313,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         HSliderMenu.Instance.SliderMenu.SetActive(false);
         HAxisMenu.Instance.AxisMenu.SetActive(false);
 
-        foreach (Collider collider in Robot.transform.GetComponentsInChildren<Collider>())
-        {
-            collider.enabled = true;
-        }
-
-        foreach (Renderer renderer in Robot.GetComponentsInChildren<Renderer>())
-        {
-            renderer.material = materialsBackup[renderer.transform.name];
-        }
-        materialsBackup.Clear();
         SetVisualsToActionObjects();
     }
 
@@ -490,6 +474,9 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
     public async Task GetRangeVisual(HInteractiveObject robot)
     {
+        Quaternion previousRotation = robot.transform.localRotation;
+        robot.transform.localRotation = SceneOrigin.rotation;
+
         float radius = 0.0f;
         int segments = 45;
         int angleStep = 360 / segments;
@@ -497,8 +484,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
         HIRobot HIRobot = (RobotActionObjectH) robot;
 
-        //List<HRobotEE> ee = await HIRobot.GetAllEE();
-        //HRobotEE effector = ee[0];
+        List<HRobotEE> ee = await HIRobot.GetAllEE();
+        HRobotEE effector = ee[0];
 
         OrderedDictionary<int, float> degreesValues = new OrderedDictionary<int, float>();
 
@@ -524,7 +511,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                     SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(HIRobot.GetId());
                     List<IO.Swagger.Model.Joint> modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
                         robot.GetId(),
-                        "default",
+                        effector.GetName(),
                         true,
                         pose,
                         startJoints);
@@ -550,7 +537,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                             SceneManagerH.Instance.SelectedRobot = SceneManagerH.Instance.GetRobot(HIRobot.GetId());
                             List<IO.Swagger.Model.Joint> modelJoints = await WebSocketManagerH.Instance.InverseKinematics(
                                 HIRobot.GetId(),
-                                "default",
+                                effector.GetName(),
                                 true,
                                 pose,
                                 startJoints);
@@ -569,16 +556,19 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 currentStep += step;
             }
         }
-        RobotRangeStorage.Instance.InsertRobotRanges(robot.name, degreesValues);
+        RobotActionObjectH r = (RobotActionObjectH) robot;
+        RobotRangeStorage.Instance.InsertRobotRanges(r.Data.Type, degreesValues);
+
+        robot.transform.localRotation = previousRotation;
     }
 
     private void ShowRangeVisual(HInteractiveObject robot)
     {
-        if (!RobotRangeStorage.Instance.RobotsRange.ContainsKey(robot.name)) {
+        RobotActionObjectH r = (RobotActionObjectH) robot;
+        if (!RobotRangeStorage.Instance.RobotsRange.ContainsKey(r.Data.Type)) {
             return;
         }
-        OrderedDictionary<int, float> valuesDictionary = RobotRangeStorage.Instance.RobotsRange[robot.name];
-
+        OrderedDictionary<int, float> valuesDictionary = RobotRangeStorage.Instance.RobotsRange[r.Data.Type];
         GameObject newObject = new GameObject("LineRenderer");
         lineRenderer = newObject.AddComponent<LineRenderer>();
         lineRenderer.loop = true;
@@ -586,9 +576,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         lineRenderer.numCornerVertices = 10;
         lineRenderer.material = RedMaterial;
         lineRenderer.positionCount = valuesDictionary.Count;
-        //lineRenderer.transform.SetParent(robot.transform);
         lineRenderer.transform.position = new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z);
+        lineRenderer.transform.localRotation = SceneOrigin.localRotation;
 
+        // setting positions to a linerenderer
         int linerendererPosition = 0;
         foreach (KeyValuePair<int, float> pair in valuesDictionary)
         {
@@ -607,7 +598,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         List<Vector3> linePoints = vectors.ToList();
         linePoints.Insert(0, new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z));
 
-
         // Mesh
         UnityEngine.Mesh mesh = new UnityEngine.Mesh();
         Vector3[] vertices = linePoints.ToArray();
@@ -616,7 +606,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         mesh.triangles = triangles;
 
         // Plane Object
-        GameObject planeObject = new GameObject("PlaneObject");
+        planeObject = new GameObject("PlaneObject");
         MeshFilter meshFilter = planeObject.AddComponent<MeshFilter>();
         meshFilter.mesh = mesh;
         planeObject.AddComponent<MeshRenderer>().material = TransparentMaterial;
@@ -639,5 +629,30 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         triangles[(positions.Length - 2) * 3 + 2] = 1;
 
         return triangles;
+    }
+
+    private void ResetVisuals()
+    {
+        // set materials for the previously selected robot
+        if (materialsBackup.Count > 0)
+        {
+            foreach (Renderer renderer in Robot.GetComponentsInChildren<Renderer>())
+            {
+                renderer.material = materialsBackup[renderer.transform.name];
+            }
+            materialsBackup.Clear();
+        }
+        // enable colliders for the previously selected robot
+        if (Robot)
+        {
+            foreach (Collider collider in Robot.transform.GetComponentsInChildren<Collider>())
+            {
+                collider.enabled = true;
+            }
+        }
+        if (lineRenderer)
+            Destroy(lineRenderer.gameObject);
+        if (planeObject)
+            Destroy(planeObject.gameObject);
     }
 }

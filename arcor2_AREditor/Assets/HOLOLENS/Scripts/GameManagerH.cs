@@ -14,6 +14,7 @@ using RosSharp.Urdf;
 using Hololens;
 public class GameManagerH : Singleton<GameManagerH>
 {
+    public List<string> RobotsWithInverseKinematics = new();
 
     private bool updatingPackageState;
 
@@ -261,11 +262,11 @@ public class GameManagerH : Singleton<GameManagerH>
         WebSocketManagerH.Instance.OnDisconnectEvent += OnDisconnected;
         WebSocketManagerH.Instance.OnShowMainScreen += OnShowMainScreen;
         ActionsManagerH.Instance.OnActionsLoaded += OnActionsLoaded;
-     /*   WebsocketManager.Instance.OnProjectRemoved += OnProjectRemoved;
-        WebsocketManager.Instance.OnProjectBaseUpdated += OnProjectBaseUpdated;
-        WebsocketManager.Instance.OnSceneRemoved += OnSceneRemoved;
-        WebsocketManager.Instance.OnSceneBaseUpdated += OnSceneBaseUpdated;*/
-    //    ConnectToSever("192.168.104.111", 6789);
+        /*   WebsocketManager.Instance.OnProjectRemoved += OnProjectRemoved;
+           WebsocketManager.Instance.OnProjectBaseUpdated += OnProjectBaseUpdated;
+           WebsocketManager.Instance.OnSceneRemoved += OnSceneRemoved;
+           WebsocketManager.Instance.OnSceneBaseUpdated += OnSceneBaseUpdated;*/
+        //    ConnectToSever("192.168.104.111", 6789);
     }
 
 
@@ -763,40 +764,59 @@ public class GameManagerH : Singleton<GameManagerH>
         }
     //    SetGameState(GameStateEnum.LoadingProject);
         try {
-            SceneManagerH.Instance.SceneOrigin.SetActive(false);
-            ShowLoadingScreen();
-            SceneManagerH.Instance.SceneStarted = true;
-           // ListScenes.Instance.createMenuScene(scene,project);
+            bool wasOnline = true;
+            if (!SceneManagerH.Instance.SceneStarted) {
+                await HEditorMenuScreen.Instance.StartScene();
+                SceneManagerH.Instance.OnSceneStateEvent += TBD;
+                wasOnline = false;
+            }
+
             if (!await SceneManagerH.Instance.CreateScene(scene, true)) {
                 HNotificationManager.Instance.ShowNotification("Failed to initialize scene Project CreateScene");
-           
-             //   HideLoadingScreen();
                 return;
             }
-            foreach (ActionObjectH actionObject in Robots)
-            {
-                //if (!RobotRangeStorage.Instance.RobotsRange.ContainsKey(actionObject.name))
-                //{
-                    //await HEndEffectorTransform.Instance.GetRangeVisual(actionObject);
-                //}
-            }
-            SceneManagerH.Instance.SceneOrigin.SetActive(true);
-            HideLoadingScreen();
+            if (wasOnline)
+                CalculateRange();
+
             if (await HProjectManager.Instance.CreateProject(project, true)) {
                 OpenProjectEditor();
             } else {
                 HNotificationManager.Instance.ShowNotification("Failed to initialize scene Project CreateProject");
-
-               // Notifications.Instance.SaveLogs(scene, project, "Failed to initialize project");
-             //   HideLoadingScreen();
             }
         } catch (TimeoutException ex) {
             Debug.LogError(ex);
             HNotificationManager.Instance.ShowNotification("Failed to initialize scene Project TimeOut");
-         //   HideLoadingScreen();
         }
     }
 
+    private void TBD(object arg1, SceneStateEventArgs args) {
+        if (args.Event.State == SceneStateData.StateEnum.Started)
+        {
+            CalculateRange();
+        }
+        SceneManagerH.Instance.OnSceneStateEvent -= TBD;
+    }
+
+    private async void CalculateRange()
+    {
+        ShowLoadingScreen();
+        HEndEffectorTransform.Instance.SceneOrigin.transform.gameObject.SetActive(false);
+        List<RobotMeta> metaList = await WebSocketManagerH.Instance.GetRobotMeta();
+
+        // find all robots with inversekinematics option
+        foreach (RobotMeta a in metaList) {
+            if (a.Features.InverseKinematics)
+                RobotsWithInverseKinematics.Add(a.Type);
+        }
+
+        foreach (ActionObjectH actionObject in Robots) {
+            if (RobotsWithInverseKinematics.Contains(actionObject.Data.Type) && !RobotRangeStorage.Instance.RobotsRange.ContainsKey(actionObject.Data.Type)) {
+                await HEndEffectorTransform.Instance.GetRangeVisual(actionObject);
+            }
+        }
+        HideLoadingScreen();
+        HEndEffectorTransform.Instance.SceneOrigin.transform.gameObject.SetActive(true);
+    }
 
 
 

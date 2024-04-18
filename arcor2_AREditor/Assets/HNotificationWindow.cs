@@ -23,7 +23,7 @@ public class HNotificationWindow : Singleton<HNotificationWindow>
 
     private IEnumerator HideNotification()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(3f);
         notificationWindow.SetActive(false);
     }
 }
