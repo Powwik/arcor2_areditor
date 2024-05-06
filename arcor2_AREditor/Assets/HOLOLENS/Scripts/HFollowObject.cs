@@ -5,6 +5,12 @@ using Microsoft.MixedReality.Toolkit.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/*********************************************************************
+ * \file HFollowObject.cs
+ * \the script follows the tracked object and changes the movement speed
+ * 
+ * \author Daniel Zmrzlý
+ *********************************************************************/
 public class HFollowObject : Singleton<HFollowObject>
 {
     public GameObject FollowingObject;
@@ -20,6 +26,7 @@ public class HFollowObject : Singleton<HFollowObject>
     {
         Vector3 currentPosition = FollowingObject.transform.localPosition;
 
+        // is moving
         if (Vector3.Distance(currentPosition, previousPosition) > 0.00001f)
         {
             switch (HEndEffectorTransform.Instance.selectedAxis)
@@ -39,6 +46,8 @@ public class HFollowObject : Singleton<HFollowObject>
                     Vector3 vAxisZ = (Vector3.up) * lengthZ * HSliderMenu.Instance.Slider.SliderValue;
                     gameObject.transform.localPosition += vAxisZ;
                     break;
+
+                // manipulation with the whole tracked object
                 default:
                     float lengthx = currentPosition.z - previousPosition.z;
                     gameObject.transform.localPosition += (Vector3.forward) * lengthx * HSliderMenu.Instance.Slider.SliderValue;
@@ -56,6 +65,11 @@ public class HFollowObject : Singleton<HFollowObject>
         previousPosition = currentPosition;
     }
 
+    /**
+     * Function to set tracked object
+     * 
+     * \param[in] o      tracked object
+     */
     public void SetFollowingObject(GameObject o)
     {
         FollowingObject = o;

@@ -5,6 +5,12 @@ using Microsoft.MixedReality.Toolkit.UI;
 using TMPro;
 using UnityEngine;
 
+/*********************************************************************
+ * \file HSLiderMenu.cs
+ * \script handles slider object
+ * 
+ * \author Daniel Zmrzlý
+ *********************************************************************/
 public class HSliderMenu : Singleton<HSliderMenu>
 {
     public TextMeshPro Value;

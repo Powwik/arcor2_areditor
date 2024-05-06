@@ -1,9 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Base;
 using Hololens;
@@ -13,12 +11,17 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Microsoft.MixedReality.Toolkit.UI.BoundsControl;
 using Microsoft.MixedReality.Toolkit.Utilities;
-using Newtonsoft.Json;
 using TriLibCore.General;
 using UnityEngine;
 using UnityEngine.Animations;
-using UnityEngine.UIElements;
 
+
+/*********************************************************************
+ * \file HEndEffectorTransform.cs
+ * \the main script for the manipulation
+ * 
+ * \author Daniel Zmrzlý
+ *********************************************************************/
 public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 {
     public Transform SceneOrigin;
@@ -33,6 +36,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
     private HActionPoint3D tmpModel;
 
     public Gizmo.Axis selectedAxis;
+    Vector3 rotation;
 
     private bool isManipulating = false;
 
@@ -76,25 +80,30 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         {
             Vector3 currentPosition = slowSphere.transform.localPosition;
 
+            // move robot model if the manipulation started
             if (Vector3.Distance(currentPosition, previousPosition) > 0.00001f)
             {
                 MoveModel(DefaultOrientation, slowGizmo.transform, MoveOption.DirectManipulation);
             }
             previousPosition = currentPosition;
 
+            // update delta values for the "fake" gizmo
             Vector3 vec = slowGizmo.transform.position - startPosition;
             slowGizmo.gameObject.GetComponent<HGizmo>().SetXDelta(TransformConvertor.UnityToROS(vec).x);
             slowGizmo.gameObject.GetComponent<HGizmo>().SetYDelta(TransformConvertor.UnityToROS(vec).y);
             slowGizmo.gameObject.GetComponent<HGizmo>().SetZDelta(TransformConvertor.UnityToROS(vec).z);
 
+            // update delta values for the original gizmo
             gizmo.gameObject.GetComponent<HGizmo>().SetXDelta(TransformConvertor.UnityToROS(vec).x);
             gizmo.gameObject.GetComponent<HGizmo>().SetYDelta(TransformConvertor.UnityToROS(vec).y);
             gizmo.gameObject.GetComponent<HGizmo>().SetZDelta(TransformConvertor.UnityToROS(vec).z);
         }
 
+        // get pointer of the hand
         IMixedRealityPointer pointer = CoreServices.InputSystem.FocusProvider.PrimaryPointer;
         if (pointer != null)
         {
+            // check if the focused object is the axis of the gizmo
             GameObject focusedObject = CoreServices.InputSystem.FocusProvider.GetFocusedObject(pointer);
             if (focusedObject && focusedObject.transform.parent)
             {
@@ -117,88 +126,120 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
+    /**
+     * The function is called after the end of the manipulation
+     */
     public void UpdatePosition()
     {
         isManipulating = false;
         gizmoTransform.GetComponent<BoundsControl>().enabled = true;
         gizmoTransform.position = lastValidPosition;
 
+        // update position of the confirmation window
         Vector3 vec = gizmoTransform.localPosition + HConfirmationWindow.Instance.ConfirmationMenuVectorUp;
         HConfirmationWindow.Instance.ConfirmationWindow.transform.localPosition = vec;
         HConfirmationWindow.Instance.ConfirmationWindow.SetActive(true);
 
+        // update position of the slider menu
         Vector3 sliderVector = gizmoTransform.localPosition + HSliderMenu.Instance.SliderMenuVectorUp;
         HSliderMenu.Instance.SliderMenu.transform.localPosition = sliderVector;
         HSliderMenu.Instance.SliderMenu.SetActive(true);
 
         HAxisMenu.Instance.AxisMenu.SetActive(true);
 
+        // destroy "fake" gizmo
         Destroy(slowSphere.gameObject);
 
+        // show original gizmo
         foreach (Renderer render in tmpModel.transform.GetComponentsInChildren<Renderer>())
         {
             render.enabled = true;
         }
     }
 
+    /**
+     * The function is called at the start of the manipulation
+     */
     public void Manipulation()
     {
         isManipulating = true;
         
         gizmoTransform.GetComponent<BoundsControl>().enabled = false;
-        
+
+        // instantiate "fake" end effector of the robot
         slowSphere = Instantiate(PointPrefab);
         slowSphere.gameObject.AddComponent<HFollowObject>().SetFollowingObject(gizmoTransform.gameObject);
         slowSphere.transform.SetParent(SceneOrigin);
         slowSphere.transform.position = gizmoTransform.position;
         slowSphere.transform.localScale = Vector3.one / 2;
 
+        // instantiate "fake" gizmo
         slowGizmo = Instantiate(EmptyGizmoPrefab);
         slowGizmo.transform.SetParent(slowSphere.transform);
         slowGizmo.transform.rotation = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
         slowGizmo.transform.position = gizmoTransform.position;
         slowGizmo.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
+        // disable UI objects
         HSliderMenu.Instance.SliderMenu.SetActive(false);
         HAxisMenu.Instance.AxisMenu.SetActive(false);
         HConfirmationWindow.Instance.ConfirmationWindow.SetActive(false);
 
+        // hide original gizmo
         foreach (Renderer render in tmpModel.transform.GetComponentsInChildren<Renderer>())
         {
             render.enabled = false;
         }
     }
 
+    /**
+     * The function is called when the confirm button is clicked
+     */
     public void ConfirmClicked()
     {
+        // move real robot
         MoveRobot();
+
+        // reset values
         startPosition = gizmoTransform.position;
         gizmo.gameObject.GetComponent<HGizmo>().SetXDelta(0);
         gizmo.gameObject.GetComponent<HGizmo>().SetYDelta(0);
         gizmo.gameObject.GetComponent<HGizmo>().SetZDelta(0);
     }
 
+    /**
+     * The function is called when the reset button is clicked
+     */
     public void ResetClicked()
     {
+        // move robot model to the previous position before manipulation
         MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
 
+        // reset gizmo position
         gizmoTransform.position = selectedEndEffector.transform.position;
 
+        // update slider menu position
         Vector3 sliderVector = gizmoTransform.position + HSliderMenu.Instance.SliderMenuVectorUp;
         HSliderMenu.Instance.SliderMenu.transform.position = sliderVector;
     }
 
+    /**
+     * The function enables manipulation for the selected robot 
+     */
     public async void ActiveEndEffectorTranform(HInteractiveObject robot)
     {
+        // remove previous listeners if any
         gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
         gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
 
+        // check if the robot supports inverse kinematics
         RobotActionObjectH r = (RobotActionObjectH) robot;
         if (!GameManagerH.Instance.RobotsWithInverseKinematics.Contains(r.Data.Type))
         {
             HNotificationWindow.Instance.ShowNotification("Robot does not support IK");
             return;
         }
+
         ResetVisuals();
 
         Robot = robot;
@@ -209,8 +250,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
         }
 
+        // allows only for the different robot
         if (selectedRobot != (RobotActionObjectH) robot)
         {
+            // add listeners for the gizmo transform to allow manipulation
             gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.AddListener((s) => UpdatePosition());
             gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.AddListener((s) => Manipulation());
             
@@ -218,13 +261,14 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 Destroy(tmpModel.gameObject);
             }
 
+            // get end effector of the selected robot
             selectedRobot = (RobotActionObjectH) robot;
             List<HRobotEE> ee = await selectedRobot.GetAllEE();
             selectedEndEffector = ee[0];
 
             startPosition = selectedEndEffector.transform.position;
 
-            // create new action point for manipulation
+            // create end effector point for the manipulation
             tmpModel = Instantiate(PointPrefab, selectedEndEffector.transform.position, selectedEndEffector.transform.rotation);
 
             tmpModel.transform.localScale = Vector3.one / 2;
@@ -237,7 +281,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             tmpModel.EnableOffscreenIndicator(false);
             gizmoTransform.gameObject.SetActive(true);
 
-            // create gizmo model for manipulation
+            // create gizmo model for the manipulation
             gizmo = Instantiate(GizmoPrefab).GetComponent<HGizmo>();
             gizmo.transform.SetParent(tmpModel.transform);
             gizmo.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
@@ -254,6 +298,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             ObjectManipulator[] o = gizmo.gameObject.GetComponentsInChildren<ObjectManipulator>();
             gizmo.gameObject.GetComponent<ScaleConstraint>().AddSource(source);
 
+            // add listeners for the each game object of the gizmo (axis movement)
             foreach (ObjectManipulator objectManipulator in o)
             {
                 objectManipulator.HostTransform = gizmoTransform;
@@ -262,10 +307,14 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             }
             await PrepareRobotModel(selectedRobot.GetId(), false);
         }
+
+        // move robot model to the position of the real robot
         MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
 
+        // update slider position
         Vector3 sliderVector = gizmoTransform.localPosition + HSliderMenu.Instance.SliderMenuVectorUp;
         HSliderMenu.Instance.SliderMenu.transform.localPosition = sliderVector;
+
         HSliderMenu.Instance.SliderMenu.SetActive(true);
         HAxisMenu.Instance.AxisMenu.SetActive(true);
         HConfirmationWindow.Instance.ConfirmationWindow.SetActive(false);
@@ -285,8 +334,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         ShowRangeVisual(robot);
     }
 
+    /**
+     * The function disables manipulation process
+     */
     public void DeactiveEndEffectorTransform()
     {
+        // move robot model to the default position
         MoveModel(DefaultOrientation, selectedEndEffector.transform, MoveOption.None);
 
         gizmoTransform.gameObject.SetActive(false);
@@ -316,12 +369,21 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         SetVisualsToActionObjects();
     }
 
+    /**
+     * Function moves model of the robot to the position of the end effector
+     * 
+     * \param[in] or      orientation
+     * \param[in] t      transform of the object 
+     * \param[in] moveOption      selected option for the manipulation
+     */
     public async void MoveModel(Orientation or, Transform t, MoveOption moveOption)
     {
+        // set position
         Vector3 transformPosition = t.position;
         Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(transformPosition));
         IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
 
+        // try calculate inverse kinematics to get model joints
         try {
             IO.Swagger.Model.Pose pose = new(orientation: or, position: position);
             List<IO.Swagger.Model.Joint> startJoints = selectedRobot.GetJoints();
@@ -335,6 +397,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
             lastValidPosition = transformPosition;
 
+            // set model joints to the selected robot
             foreach (IO.Swagger.Model.Joint joint in modelJoints)
             {
                 SceneManagerH.Instance.SelectedRobot.SetJointValue(joint.Name, (float) joint.Value);
@@ -342,8 +405,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
         catch (RequestFailedException)
         {
+            // set red material to the robot
             SetErrorMaterial(Robot, RedMaterial);
 
+            // reset position of the manipulation object depending on the manipulation option
             switch (moveOption)
             {
                 case MoveOption.DirectManipulation:
@@ -357,6 +422,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
+    /**
+     * Function moves real robot to the position of the end effector
+     * 
+     */
     private async void MoveRobot()
     {
         try
@@ -375,6 +444,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
+    /**
+     * Function prepares robot for the manipulation
+     * 
+     * \param[in] robotID      ID of the robot
+     * \param[in] shadowRealRobot      value if robot should be shaded
+     */
     private async Task PrepareRobotModel(string robotID, bool shadowRealRobot)
     {
         if (SceneManagerH.Instance.SceneStarted)
@@ -384,6 +459,12 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
+    /**
+     * Function sets error material to the robot
+     * 
+     * \param[in] robot      selected robot
+     * \param[in] material      what material it will be changed to
+     */
     private void SetErrorMaterial(HInteractiveObject robot, Material material)
     {
         foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
@@ -393,15 +474,28 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         StartCoroutine(HideErrorMaterial(robot, TransparentMaterial));
     }
 
+    /**
+     * Function hides error material of the robot
+     * 
+     * \param[in] robot      selected robot
+     * \param[in] material      what material it will be changed to
+     */
     private IEnumerator HideErrorMaterial(HInteractiveObject robot, Material material)
     {
+        // wait for 0,5 seconds
         yield return new WaitForSeconds(0.5f);
+
+        // set default material to robot parts
         foreach (Renderer renderer in robot.GetComponentsInChildren<Renderer>())
         {
             renderer.material = material;
         }
     }
 
+    /**
+     * Function removes colliders and mesh renderers from the START, END, ActionPoints objects
+     * 
+     */
     private void RemoveVisualsFromActionObjects()
     {
         Transform start = SceneOrigin.Find("START");
@@ -437,6 +531,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
+    /**
+     * Function adds colliders and mesh renderers to the START, END, ActionPoints objects
+     * 
+     */
     private void SetVisualsToActionObjects()
     {
         Transform start = SceneOrigin.Find("START");
@@ -472,23 +570,33 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
     }
 
+    /**
+     * Function gets points for the range object around the robot
+     * 
+     * \param[in] robot      selected robot
+     */
     public async Task GetRangeVisual(HInteractiveObject robot)
     {
-        Quaternion previousRotation = robot.transform.localRotation;
-        robot.transform.localRotation = SceneOrigin.rotation;
-
         float radius = 0.0f;
         int segments = 45;
         int angleStep = 360 / segments;
         float step = 0.05f;
 
+        rotation = robot.transform.localRotation.eulerAngles;
+        Quaternion previousRotation = robot.transform.rotation;
+        Quaternion previousLocalRotation = robot.transform.localRotation;
+        robot.transform.rotation = Quaternion.identity;
+        robot.transform.localRotation = Quaternion.identity;
+
         HIRobot HIRobot = (RobotActionObjectH) robot;
 
+        // get default end effector
         List<HRobotEE> ee = await HIRobot.GetAllEE();
         HRobotEE effector = ee[0];
 
         OrderedDictionary<int, float> degreesValues = new OrderedDictionary<int, float>();
 
+        // iterate 
         for (int i = 0; i < segments; i++)
         {
             float angle = Mathf.Deg2Rad * i * angleStep;
@@ -502,7 +610,8 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 float x = Mathf.Sin(angle) * (radius + currentStep);
                 float z = Mathf.Cos(angle) * (radius + currentStep);
                 Vector3 currentPosition = new Vector3(robot.transform.position.x + x, SceneOrigin.position.y, robot.transform.position.z + z);
-                
+
+                // try to get point in the current angle with added step
                 try {
                     Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPosition));
                     IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
@@ -520,15 +629,19 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 }
                 catch (RequestFailedException)
                 {
-                    // dokroceni
+                    // set last valid position as start position
                     float startStep = currentStep - step;
                     Vector3 finalPosition = lastPostition;
+
+
+                    // calculate with a smaller step
                     while (startStep < currentStep)
                     {
                         float x1 = Mathf.Sin(angle) * (radius + startStep);
                         float z1 = Mathf.Cos(angle) * (radius + startStep);
                         Vector3 currentPosition1 = new Vector3(robot.transform.position.x + x1, SceneOrigin.position.y, robot.transform.position.z + z1);
 
+                        // try to get point in the current angle with added step
                         try {
                             Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPosition1));
                             IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
@@ -546,29 +659,43 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                         }
                         catch (RequestFailedException)
                         {
+                            // last valid point in the current angle was found
                             degreesValues.Add(i * angleStep, Vector3.Distance(new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z), finalPosition));
                             isValid = false;
                             break;
                         }
-                        startStep += 0.01f;
+                        startStep += 0.005f;
                     }
                 }
                 currentStep += step;
             }
         }
         RobotActionObjectH r = (RobotActionObjectH) robot;
+
+        // save last valid points around robot to the storage
         RobotRangeStorage.Instance.InsertRobotRanges(r.Data.Type, degreesValues);
 
-        robot.transform.localRotation = previousRotation;
+        robot.transform.rotation = previousRotation;
+        robot.transform.localRotation = previousLocalRotation;
     }
 
+    /**
+     * Function shows range object
+     * 
+     * \param[in] robot      selected robot
+     */
     private void ShowRangeVisual(HInteractiveObject robot)
     {
         RobotActionObjectH r = (RobotActionObjectH) robot;
+
+        // check if the range values are available
         if (!RobotRangeStorage.Instance.RobotsRange.ContainsKey(r.Data.Type)) {
             return;
         }
+
         OrderedDictionary<int, float> valuesDictionary = RobotRangeStorage.Instance.RobotsRange[r.Data.Type];
+
+        // create line renderer object
         GameObject newObject = new GameObject("LineRenderer");
         lineRenderer = newObject.AddComponent<LineRenderer>();
         lineRenderer.loop = true;
@@ -581,18 +708,20 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
         // setting positions to a linerenderer
         int linerendererPosition = 0;
+        float need = rotation.y - robot.transform.localRotation.eulerAngles.y;
+
+        // connect all available points for the line renderer
         foreach (KeyValuePair<int, float> pair in valuesDictionary)
         {
-            float angle = Mathf.Deg2Rad * pair.Key;
+            float angle = Mathf.Deg2Rad * (pair.Key - need);
             float x = Mathf.Sin(angle) * pair.Value;
             float z = Mathf.Cos(angle) * pair.Value;
             Vector3 position = new Vector3(robot.transform.position.x + x, SceneOrigin.position.y, robot.transform.position.z + z);
-
             lineRenderer.SetPosition(linerendererPosition, position);
             linerendererPosition++;
         }
 
-
+        // insert artificial point (center of the robot)
         Vector3[] vectors = new Vector3[lineRenderer.positionCount];
         lineRenderer.GetPositions(vectors);
         List<Vector3> linePoints = vectors.ToList();
@@ -601,17 +730,29 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         // Mesh
         UnityEngine.Mesh mesh = new UnityEngine.Mesh();
         Vector3[] vertices = linePoints.ToArray();
+
+        
         int[] triangles = CreateTriangles(vertices);
         mesh.vertices = vertices;
         mesh.triangles = triangles;
 
-        // Plane Object
+        GameObject pivot = new GameObject("pivot");
+        pivot.transform.position = linePoints.First();
+
+        // create plane object
         planeObject = new GameObject("PlaneObject");
-        MeshFilter meshFilter = planeObject.AddComponent<MeshFilter>();
-        meshFilter.mesh = mesh;
+        planeObject.AddComponent<MeshFilter>().mesh = mesh;
         planeObject.AddComponent<MeshRenderer>().material = TransparentMaterial;
+        planeObject.transform.SetParent(pivot.transform);
     }
 
+    /**
+     * Function creates a triangular mesh from the given positions in 3D space
+     * 
+     * \param[in] positions      positions of the points
+     * 
+     * \return      array of indices that specify how the vertices should be connected
+     */
     private int[] CreateTriangles(Vector3[] positions)
     {
         int[] triangles = new int[(positions.Length - 2) * 3 + 3]; // +3 for last triangle
@@ -631,6 +772,10 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         return triangles;
     }
 
+    /**
+     * Function resets visuals of the robot at the end of the manipulation process
+     * 
+     */
     private void ResetVisuals()
     {
         // set materials for the previously selected robot
@@ -642,6 +787,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
             }
             materialsBackup.Clear();
         }
+
         // enable colliders for the previously selected robot
         if (Robot)
         {
@@ -650,6 +796,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                 collider.enabled = true;
             }
         }
+
         if (lineRenderer)
             Destroy(lineRenderer.gameObject);
         if (planeObject)

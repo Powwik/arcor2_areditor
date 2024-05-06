@@ -9,6 +9,12 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using UnityEngine;
 using LibTessDotNet;
 
+/*********************************************************************
+ * \file HAxisMenu.cs
+ * \the script manipulates with the robot using (+, -) buttons
+ * 
+ * \author Daniel Zmrzlý
+ *********************************************************************/
 public class HAxisMenu : Singleton<HAxisMenu> {
 
     public GameObject AxisMenu;
@@ -28,9 +34,11 @@ public class HAxisMenu : Singleton<HAxisMenu> {
     // Update is called once per frame
     private void Update()
     {
+        // get pointer of the hand
         IMixedRealityPointer pointer = CoreServices.InputSystem.FocusProvider.PrimaryPointer;
         if (pointer != null)
         {
+            // check if the focused object is the axis of the gizmo
             GameObject focusedObject = CoreServices.InputSystem.FocusProvider.GetFocusedObject(pointer);
             if (focusedObject && focusedObject.transform.parent)
             {
@@ -51,6 +59,7 @@ public class HAxisMenu : Singleton<HAxisMenu> {
             }
         }
 
+        // show manipulation buttons next to the selected axis
         if (SelectedAxis != Gizmo.Axis.NONE)
         {
             switch (SelectedAxis)
@@ -77,6 +86,11 @@ public class HAxisMenu : Singleton<HAxisMenu> {
         }
     }
 
+    /**
+     * Function moves model of the robot to the position of the end effector
+     * 
+     * \param[in] s      unit expressed in float
+     */
     private void MoveObject(float s)
     {
         switch (SelectedAxis)
@@ -99,13 +113,17 @@ public class HAxisMenu : Singleton<HAxisMenu> {
             default:
                 return;
         }
+
+        // update position of the confirmation menu
         Vector3 confirmV = HEndEffectorTransform.Instance.gizmoTransform.localPosition + HConfirmationWindow.Instance.ConfirmationMenuVectorUp;
         HConfirmationWindow.Instance.ConfirmationWindow.transform.localPosition = confirmV;
         HConfirmationWindow.Instance.ConfirmationWindow.SetActive(true);
 
+        // update position of the slider menu
         Vector3 sliderV = HEndEffectorTransform.Instance.gizmoTransform.localPosition + HSliderMenu.Instance.SliderMenuVectorUp;
         HSliderMenu.Instance.SliderMenu.transform.localPosition = sliderV;
 
+        // move robot model
         HEndEffectorTransform.Instance.MoveModel(HEndEffectorTransform.Instance.DefaultOrientation, HEndEffectorTransform.Instance.gizmoTransform, HEndEffectorTransform.MoveOption.Buttons);
     }
 }

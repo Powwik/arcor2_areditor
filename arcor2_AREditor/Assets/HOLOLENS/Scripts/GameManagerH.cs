@@ -765,9 +765,13 @@ public class GameManagerH : Singleton<GameManagerH>
     //    SetGameState(GameStateEnum.LoadingProject);
         try {
             bool wasOnline = true;
+
+            // check if the application is in offline mode
             if (!SceneManagerH.Instance.SceneStarted) {
+                // start online mode
                 await HEditorMenuScreen.Instance.StartScene();
-                SceneManagerH.Instance.OnSceneStateEvent += TBD;
+                // subscribe to event for calculation of range object
+                SceneManagerH.Instance.OnSceneStateEvent += SubscribeForRangeCalculation;
                 wasOnline = false;
             }
 
@@ -775,6 +779,7 @@ public class GameManagerH : Singleton<GameManagerH>
                 HNotificationManager.Instance.ShowNotification("Failed to initialize scene Project CreateScene");
                 return;
             }
+            // calculate range object if application was in online mode
             if (wasOnline)
                 CalculateRange();
 
@@ -789,14 +794,27 @@ public class GameManagerH : Singleton<GameManagerH>
         }
     }
 
-    private void TBD(object arg1, SceneStateEventArgs args) {
+    /**
+     * Function calls calculation of the range object
+     * 
+     * \param[in] arg1      
+     * \param[in] args      event arguments
+     */
+    private void SubscribeForRangeCalculation(object arg1, SceneStateEventArgs args)
+    {
         if (args.Event.State == SceneStateData.StateEnum.Started)
         {
             CalculateRange();
         }
-        SceneManagerH.Instance.OnSceneStateEvent -= TBD;
+
+        // unsubscribe event
+        SceneManagerH.Instance.OnSceneStateEvent -= SubscribeForRangeCalculation;
     }
 
+    /**
+     * Function calculates range objects for robots with inverse kinematics
+     * 
+     */
     private async void CalculateRange()
     {
         ShowLoadingScreen();
@@ -804,16 +822,23 @@ public class GameManagerH : Singleton<GameManagerH>
         List<RobotMeta> metaList = await WebSocketManagerH.Instance.GetRobotMeta();
 
         // find all robots with inversekinematics option
-        foreach (RobotMeta a in metaList) {
-            if (a.Features.InverseKinematics)
-                RobotsWithInverseKinematics.Add(a.Type);
+        foreach (RobotMeta meta in metaList)
+        {
+            if (meta.Features.InverseKinematics)
+            {
+                RobotsWithInverseKinematics.Add(meta.Type);
+            }
         }
 
-        foreach (ActionObjectH actionObject in Robots) {
-            if (RobotsWithInverseKinematics.Contains(actionObject.Data.Type) && !RobotRangeStorage.Instance.RobotsRange.ContainsKey(actionObject.Data.Type)) {
+        // calculates range objects for all robots with inverse kinematics option
+        foreach (ActionObjectH actionObject in Robots)
+        {
+            if (RobotsWithInverseKinematics.Contains(actionObject.Data.Type) && !RobotRangeStorage.Instance.RobotsRange.ContainsKey(actionObject.Data.Type))
+            {
                 await HEndEffectorTransform.Instance.GetRangeVisual(actionObject);
             }
         }
+
         HideLoadingScreen();
         HEndEffectorTransform.Instance.SceneOrigin.transform.gameObject.SetActive(true);
     }
