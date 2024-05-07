@@ -105,6 +105,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         {
             // check if the focused object is the axis of the gizmo
             GameObject focusedObject = CoreServices.InputSystem.FocusProvider.GetFocusedObject(pointer);
+
             if (focusedObject && focusedObject.transform.parent)
             {
                 switch (focusedObject.transform.parent.name)
@@ -228,9 +229,6 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
      */
     public async void ActiveEndEffectorTranform(HInteractiveObject robot)
     {
-        // remove previous listeners if any
-        gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
-        gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
 
         // check if the robot supports inverse kinematics
         RobotActionObjectH r = (RobotActionObjectH) robot;
@@ -241,6 +239,16 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
         }
 
         ResetVisuals();
+
+        // remove outline component, it causes white layer on the robot 
+        foreach (Outline outline in robot.gameObject.GetComponentsInChildren<Outline>()) {
+            Destroy(outline);
+        }
+
+        // remove previous listeners if any
+        gizmoTransform.gameObject.GetComponent<ObjectManipulator>().OnManipulationEnded.RemoveAllListeners();
+        gizmoTransform.GetComponent<ObjectManipulator>().OnManipulationStarted.RemoveAllListeners();
+
 
         Robot = robot;
 
@@ -596,7 +604,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
         OrderedDictionary<int, float> degreesValues = new OrderedDictionary<int, float>();
 
-        // iterate 
+        // iterate through all selected angles
         for (int i = 0; i < segments; i++)
         {
             float angle = Mathf.Deg2Rad * i * angleStep;
@@ -605,6 +613,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
 
             Vector3 lastPostition = new Vector3(robot.transform.position.x, SceneOrigin.position.y, robot.transform.position.z);
 
+            // get last valid position with normal step
             while (isValid)
             {
                 float x = Mathf.Sin(angle) * (radius + currentStep);
@@ -633,17 +642,16 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                     float startStep = currentStep - step;
                     Vector3 finalPosition = lastPostition;
 
-
-                    // calculate with a smaller step
+                    // calculate the last valid position with a smaller step
                     while (startStep < currentStep)
                     {
                         float x1 = Mathf.Sin(angle) * (radius + startStep);
                         float z1 = Mathf.Cos(angle) * (radius + startStep);
-                        Vector3 currentPosition1 = new Vector3(robot.transform.position.x + x1, SceneOrigin.position.y, robot.transform.position.z + z1);
+                        Vector3 currentPos = new Vector3(robot.transform.position.x + x1, SceneOrigin.position.y, robot.transform.position.z + z1);
 
                         // try to get point in the current angle with added step
                         try {
-                            Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPosition1));
+                            Vector3 point = TransformConvertor.UnityToROS(GameManagerH.Instance.Scene.transform.InverseTransformPoint(currentPos));
                             IO.Swagger.Model.Position position = DataHelper.Vector3ToPosition(point);
                             IO.Swagger.Model.Pose pose = new(orientation: DefaultOrientation, position: position);
                             List<IO.Swagger.Model.Joint> startJoints = new();
@@ -655,7 +663,7 @@ public class HEndEffectorTransform : Singleton<HEndEffectorTransform>
                                 pose,
                                 startJoints);
 
-                            finalPosition = currentPosition1;
+                            finalPosition = currentPos;
                         }
                         catch (RequestFailedException)
                         {
