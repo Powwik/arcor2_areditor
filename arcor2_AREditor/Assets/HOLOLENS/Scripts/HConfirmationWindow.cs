@@ -5,6 +5,12 @@ using Microsoft.MixedReality.Toolkit.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/*********************************************************************
+ * \file HConfirmationWindow.cs
+ * \script for the confirmation window 
+ * 
+ * \author Daniel Zmrzlý
+ *********************************************************************/
 public class HConfirmationWindow : Singleton<HConfirmationWindow>
 {
     public GameObject ConfirmationWindow;
@@ -25,12 +31,20 @@ public class HConfirmationWindow : Singleton<HConfirmationWindow>
         
     }
 
+    /**
+     * Function is called when the confirm button is pressed 
+     * 
+     */
     private void ConfirmClicked()
     {
         ConfirmationWindow.SetActive(false);
         HEndEffectorTransform.Instance.ConfirmClicked();
     }
 
+    /**
+     * Function is called when the reset button is pressed 
+     * 
+     */
     private void ResetClicked()
     {
         ConfirmationWindow.gameObject.SetActive(false);
